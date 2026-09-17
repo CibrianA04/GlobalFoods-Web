@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--gf-fondo);
+  color: var(--gf-texto);
+  font-family: system-ui, sans-serif;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chip__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+/* Objetivos tactiles de 44px minimo: la asesora usa esto en la calle
+   y el almacen con guantes. */
+button, .boton, input, select {
+  min-height: 44px;
+  font: inherit;
+}

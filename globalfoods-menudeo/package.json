@@ -1,0 +1,14 @@
+{
+  "//": [
+    "package.json",
+    "- \"type\": \"module\", para poder usar import/export (módulos ES) en vez",
+    "  de require, tanto en el servidor como en el cliente.",
+    "- Un script \"dev\" que arranca el servidor con 'node --watch', para que",
+    "  se reinicie solo cada vez que se guarda un archivo.",
+    "- Un script \"start\" para arrancarlo en producción, sin --watch.",
+    "- Una sola dependencia real: \"mysql2\", porque hablar con MySQL sin una",
+    "  librería sería poco razonable. Todo lo demás (ruteo, servidor HTTP,",
+    "  manejo de JSON) es JavaScript estándar de Node, sin frameworks.",
+    "- \"engines\": Node 22 o superior, la versión que fija .nvmrc."
+  ]
+}

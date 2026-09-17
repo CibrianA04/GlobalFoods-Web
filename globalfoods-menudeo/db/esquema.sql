@@ -1,0 +1,1 @@
+-- Esquema de la base de datos. MySQL 8.

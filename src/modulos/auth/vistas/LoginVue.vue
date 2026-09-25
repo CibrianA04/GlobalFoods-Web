@@ -16,7 +16,6 @@ const contrasenia = ref('')
     <div class="login__foto">
       <img :src="camarones" alt="" class="login__imagen" />
     </div>
-
     <div class="login__panel">
       <div class="login__contenido">
         <img :src="logo" alt="Global Foods México" class="login__logo" />
@@ -37,8 +36,8 @@ const contrasenia = ref('')
             etiqueta="Contraseña"
             tipo="password"
             icono="candado"
-            autocomplete="current-password"
-          >
+            autocomplete="current-password">
+            
             <template #accion>
               <button type="button" class="login__enlace login__enlace--chico">
                 ¿Olvidó su contraseña?
@@ -79,11 +78,14 @@ const contrasenia = ref('')
 }
 
 .login__foto {
+  position: relative;
   overflow: hidden;
+  min-height: 0;
 }
 
 .login__imagen {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;

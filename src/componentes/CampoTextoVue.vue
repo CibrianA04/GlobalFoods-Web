@@ -1,7 +1,5 @@
 <script setup lang="ts">
 // Campo de texto reutilizable.
-// No sabe nada de ninguna pantalla en concreto: todo lo particular
-// (textos, enlaces, atributos extra) entra por props, por $attrs o por el slot.
 
 type IconoCampo = 'usuario' | 'candado'
 

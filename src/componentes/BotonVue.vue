@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // Botón reutilizable.
-// El texto va siempre por el slot por defecto, así el componente
-// no trae ninguna palabra propia de una pantalla concreta.
 
 interface Props {
   /** Tipo nativo del botón. */
   tipo?: 'button' | 'submit'
-  /** Apariencia: relleno de marca o versión discreta sobre fondo claro. */
-  variante?: 'primario' | 'secundario'
+  /** Apariencia: relleno de marca, versión discreta sobre fondo claro o verde de acción positiva. */
+  variante?: 'primario' | 'secundario' | 'exito'
+  /** Botón redondo chico que solo lleva un icono. Requiere `aria-label`. */
+  soloIcono?: boolean
   deshabilitado?: boolean
   /** Muestra un girador y bloquea el botón mientras dura una operación. */
   cargando?: boolean
@@ -16,6 +16,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   tipo: 'button',
   variante: 'primario',
+  soloIcono: false,
   deshabilitado: false,
   cargando: false,
 })
@@ -24,7 +25,7 @@ withDefaults(defineProps<Props>(), {
 <template>
   <button
     class="boton"
-    :class="`boton--${variante}`"
+    :class="[`boton--${variante}`, { 'boton--solo-icono': soloIcono }]"
     :type="tipo"
     :disabled="deshabilitado || cargando"
     :aria-busy="cargando || undefined"
@@ -81,6 +82,22 @@ withDefaults(defineProps<Props>(), {
 
 .boton--secundario:hover:not(:disabled) {
   background: var(--gf-fondo);
+}
+
+.boton--exito {
+  background: var(--gf-entregado-punto);
+  color: var(--gf-superficie);
+}
+
+.boton--exito:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gf-entregado-punto) 85%, var(--gf-texto));
+}
+
+.boton--solo-icono {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .boton__girador {

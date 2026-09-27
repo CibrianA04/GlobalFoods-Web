@@ -7,7 +7,6 @@ import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
 
-// Elementos del menú lateral
 const itemsNavegacion: ItemNavegacion[] = [
   { etiqueta: 'Inicio', icono: 'inicio' },
   { etiqueta: 'Pedidos', icono: 'pedidos' },
@@ -16,7 +15,6 @@ const itemsNavegacion: ItemNavegacion[] = [
   { etiqueta: 'Usuarios', icono: 'usuario' },
 ]
 
-// Definición de las columnas de la tabla según tu diseño en Figma
 const columnasUsuarios: ColumnaTabla[] = [
   { clave: 'tipo', etiqueta: 'TIPO' },
   { clave: 'nombre', etiqueta: 'NOMBRE' },
@@ -27,7 +25,6 @@ const columnasUsuarios: ColumnaTabla[] = [
   { clave: 'cambios', etiqueta: 'CAMBIOS', alineacion: 'centro' },
 ]
 
-// Definición de tipos para los usuarios
 interface Usuario {
   id: number
   tipo: string
@@ -38,7 +35,6 @@ interface Usuario {
   estado: 'activo' | 'inactivo'
 }
 
-// Datos simulados idénticos a tu pantalla de Figma
 const usuarios: Usuario[] = [
   {
     id: 1,

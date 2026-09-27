@@ -111,7 +111,7 @@ const contrasenia = ref('')
 
 .login__logo {
   display: block;
-  width: 210px;
+  width: 230px;
   max-width: 100%;
   margin: 0 auto 40px;
 }
@@ -127,8 +127,8 @@ const contrasenia = ref('')
 }
 
 .login__registro {
-  margin: 40px 0 0;
-  font-size: 13px;
+  margin: 20px 0 0;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -142,7 +142,7 @@ const contrasenia = ref('')
   justify-content: center;
   gap: 8px;
   padding-top: 24px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--gf-texto-tenue);
 }
 
@@ -170,7 +170,7 @@ const contrasenia = ref('')
 }
 
 .login__enlace--chico {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .login__enlace--fuerte {

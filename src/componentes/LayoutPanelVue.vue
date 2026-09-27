@@ -46,11 +46,13 @@ withDefaults(defineProps<Props>(), {
   background: var(--gf-fondo);
 }
 
-/* Tarjeta blanca separada del borde; encabezado y pie quedan de lado a lado. */
+/* Tarjeta blanca centrada con ancho máximo (el del diseño); encabezado y pie quedan de lado a lado. */
 .layout__cuerpo {
   display: grid;
   grid-template-columns: 156px minmax(0, 1fr);
-  margin: 24px;
+  width: calc(100% - 48px);
+  max-width: 1440px;
+  margin: 24px auto;
   overflow: hidden;
   border-radius: var(--gf-radio);
   background: var(--gf-superficie);
@@ -59,14 +61,15 @@ withDefaults(defineProps<Props>(), {
 
 .layout__contenido {
   min-width: 0;
-  padding: 28px 32px 40px;
+  padding: 28px 32px 16px;
 }
 
 @media (max-width: 900px) {
   .layout__cuerpo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
-    margin: 12px;
+    width: calc(100% - 24px);
+    margin: 12px auto;
   }
 
   .layout__contenido {

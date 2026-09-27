@@ -85,7 +85,7 @@ const pedidos: {
       <section>
         <EncabezadoSeccionVue titulo="Inventario" icono="caja" />
 
-        <TablaVue :columnas="columnasInventario" :alto-maximo="220">
+        <TablaVue :columnas="columnasInventario" :alto-maximo="180">
           <tr v-for="fila in inventario" :key="fila.talla">
             <td>{{ fila.talla }}</td>
             <td>{{ fila.precio }}</td>
@@ -95,10 +95,10 @@ const pedidos: {
         </TablaVue>
       </section>
 
-      <section>
+      <section class="panel__pedidos">
         <EncabezadoSeccionVue titulo="Pedidos Actuales" icono="reloj" />
 
-        <TablaVue :columnas="columnasPedidos" :alto-maximo="200">
+        <TablaVue :columnas="columnasPedidos" :alto-maximo="170">
           <tr v-for="pedido in pedidos" :key="pedido.id">
             <td class="panel__id">{{ pedido.id }}</td>
             <td>
@@ -123,18 +123,16 @@ const pedidos: {
 </template>
 
 <style scoped>
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  max-width: 1100px;
-}
-
 .panel__bienvenida {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel__pedidos {
+  margin-top: 20px;
 }
 
 .panel__titulo {
@@ -184,10 +182,6 @@ const pedidos: {
 }
 
 @media (max-width: 900px) {
-  .panel {
-    gap: 28px;
-  }
-
   .panel__titulo {
     font-size: 20px;
   }

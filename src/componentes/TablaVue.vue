@@ -66,7 +66,7 @@ defineProps<Props>()
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 12px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--gf-borde);
   background: var(--gf-fondo);
   color: var(--gf-texto-tenue);
@@ -80,7 +80,7 @@ defineProps<Props>()
 
 /* Sin saltos de línea: en pantallas angostas aparece el scroll horizontal propio. */
 .tabla__tabla :slotted(td) {
-  padding: 14px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--gf-borde);
   vertical-align: middle;
   white-space: nowrap;

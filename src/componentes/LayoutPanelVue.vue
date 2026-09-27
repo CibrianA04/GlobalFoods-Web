@@ -36,8 +36,10 @@ withDefaults(defineProps<Props>(), {
 </template>
 
 <style scoped>
+/* minmax(0, 1fr): la columna no se ensancha con el título del encabezado en móvil. */
 .layout {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
   min-height: 100vh;
   min-height: 100dvh;

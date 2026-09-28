@@ -1,0 +1,34 @@
+name: Node.js CI with Docker
+
+on:
+  push:
+    branches: [ "main"]
+  
+
+jobs:
+  frontend-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up Node.js 24
+      uses: actions/setup-node@v5
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: '**/package-lock.json'
+
+    - name: Install Frontend dependencies
+      run: |
+        npm install --legacy-peer-deps
+
+    - name: Build Frontend
+      run: |
+        npm run build
+
+    - name: Deploy to Cloudflare (production)
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        workingDirectory: frontend
+        command: deploy

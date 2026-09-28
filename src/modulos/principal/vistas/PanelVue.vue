@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
 import BotonVue from '@/componentes/BotonVue.vue'
 import ChipEstadoVue, { type EstadoPedido } from '@/componentes/ChipEstadoVue.vue'
 import EncabezadoSeccionVue from '@/componentes/EncabezadoSeccionVue.vue'
@@ -6,6 +8,35 @@ import IconoVue from '@/componentes/IconoVue.vue'
 import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
+import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { obtenerInventarioActual, type ArticuloInventario } from '@/modulos/almacen/servicios/servicioInventario'
+
+const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
+const inventario = ref<ArticuloInventario[]>([])
+const cargandoInventario = ref(true)
+const errorInventario = ref('')
+
+onMounted(async () => {
+  try {
+    inventario.value = await obtenerInventarioActual()
+  } catch (errorCapturado) {
+    errorInventario.value = errorCapturado instanceof Error
+      ? errorCapturado.message
+      : 'No se pudo cargar el inventario.'
+  } finally {
+    cargandoInventario.value = false
+  }
+})
+
+const formatoPrecio = new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  maximumFractionDigits: 2,
+})
+
+function mostrarPrecio(precio: number): string {
+  return formatoPrecio.format(precio)
+}
 
 // agregar `ruta` a cada item cuando existan sus pantallas.
 const itemsNavegacion: ItemNavegacion[] = [
@@ -20,19 +51,7 @@ const columnasInventario: ColumnaTabla[] = [
   { clave: 'talla', etiqueta: 'Talla' },
   { clave: 'precio', etiqueta: 'Precio' },
   { clave: 'master', etiqueta: 'Master', alineacion: 'centro' },
-  { clave: 'stock', etiqueta: 'Stock', alineacion: 'centro' },
-]
-
-// Datos provisionales, luego reemplazados por los del backend
-const inventario = [
-  { talla: '16/20', precio: '$340', master: 20, stock: 30 },
-  { talla: '21/25', precio: '$310', master: 20, stock: 45 },
-  { talla: '26/30', precio: '$295', master: 20, stock: 38 },
-  { talla: '31/35', precio: '$280', master: 20, stock: 52 },
-  { talla: '36/40', precio: '$270', master: 20, stock: 60 },
-  { talla: '41/50', precio: '$250', master: 20, stock: 45 },
-  { talla: '51/60', precio: '$230', master: 20, stock: 70 },
-  { talla: '61/70', precio: '$210', master: 20, stock: 80 },
+  { clave: 'cantidadKg', etiqueta: 'Stock (kg)', alineacion: 'centro' },
 ]
 
 const columnasPedidos: ColumnaTabla[] = [
@@ -67,7 +86,7 @@ const pedidos: {
     <div class="panel">
       <div class="panel__bienvenida">
         <div>
-          <h1 class="panel__titulo">Bienvenido de vuelta, Admin</h1>
+          <h1 class="panel__titulo">Bienvenido de vuelta, {{ nombreUsuario }}</h1>
           <p class="panel__subtitulo">
             Monitorea el inventario y gestiona los pedidos recientes de hoy.
           </p>
@@ -86,11 +105,20 @@ const pedidos: {
         <EncabezadoSeccionVue titulo="Inventario" icono="caja" />
 
         <TablaVue :columnas="columnasInventario" :alto-maximo="180">
+          <tr v-if="cargandoInventario">
+            <td colspan="4">Cargando inventario...</td>
+          </tr>
+          <tr v-else-if="errorInventario">
+            <td colspan="4" role="alert">{{ errorInventario }}</td>
+          </tr>
+          <tr v-else-if="inventario.length === 0">
+            <td colspan="4">No hay productos disponibles.</td>
+          </tr>
           <tr v-for="fila in inventario" :key="fila.talla">
             <td>{{ fila.talla }}</td>
-            <td>{{ fila.precio }}</td>
+            <td>{{ mostrarPrecio(fila.precio) }}</td>
             <td class="tabla__celda--centro">{{ fila.master }}</td>
-            <td class="tabla__celda--centro">{{ fila.stock }}</td>
+            <td class="tabla__celda--centro">{{ fila.cantidadKg }}</td>
           </tr>
         </TablaVue>
       </section>

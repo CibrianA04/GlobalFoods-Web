@@ -1,6 +1,7 @@
 {
-  "name": "globalfoods-web",
+  "name": "globalfoods-interfaz-web",
   "version": "0.0.0",
+  "description": "Interfaz web de Global Foods México",
   "private": true,
   "type": "module",
   "scripts": {

@@ -9,6 +9,7 @@ export type NombreIcono =
   | 'caja'
   | 'reloj'
   | 'engrane'
+  | 'salir'
   | 'mas'
   | 'bolsa'
   | 'lapiz'
@@ -95,6 +96,12 @@ withDefaults(defineProps<Props>(), {
     <template v-else-if="nombre === 'mas'">
       <path d="M12 5v14" />
       <path d="M5 12h14" />
+    </template>
+
+    <template v-else-if="nombre === 'salir'">
+      <path d="M10 17l5-5-5-5" />
+      <path d="M15 12H3" />
+      <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
     </template>
 
     <template v-else-if="nombre === 'bolsa'">

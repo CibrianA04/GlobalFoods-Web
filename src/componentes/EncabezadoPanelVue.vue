@@ -2,10 +2,12 @@
 // Barra superior del panel: logo, título de la pantalla y usuario.
 
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 import BotonVue from '@/componentes/BotonVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
-import logo from '@/assets/logo-transparente.png'
+import { cerrarSesion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import logo from '@/recursos/logo-transparente.png'
 
 interface Props {
   titulo: string
@@ -14,6 +16,12 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const enrutador = useRouter()
+
+function salir(): void {
+  cerrarSesion()
+  enrutador.replace('/inicio-sesion')
+}
 
 // Iniciales de las dos primeras palabras del nombre.
 const iniciales = computed(() =>
@@ -41,9 +49,14 @@ const iniciales = computed(() =>
       <span class="encabezado__avatar" aria-hidden="true">{{ iniciales }}</span>
       <p class="encabezado__nombre">{{ usuario }}</p>
 
-      <!-- TODO: abrir la configuración cuando exista la pantalla. -->
-      <BotonVue variante="secundario" solo-icono aria-label="Configuración">
-        <IconoVue nombre="engrane" :tamano="18" />
+      <BotonVue
+        variante="secundario"
+        solo-icono
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+        @click="salir"
+      >
+        <IconoVue nombre="salir" :tamano="18" />
       </BotonVue>
     </div>
   </header>

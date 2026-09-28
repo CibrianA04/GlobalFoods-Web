@@ -113,7 +113,7 @@ const valor = defineModel<string>({ default: '' })
 }
 
 .campo__etiqueta {
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--gf-texto);
 }
@@ -164,7 +164,7 @@ const valor = defineModel<string>({ default: '' })
   background: transparent;
   color: var(--gf-texto);
   font: inherit;
-  font-size: 14px;
+  font-size: 18px;
   outline: none;
 }
 
@@ -179,7 +179,7 @@ const valor = defineModel<string>({ default: '' })
 
 .campo__error {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--gf-cancelado-punto);
 }
 </style>

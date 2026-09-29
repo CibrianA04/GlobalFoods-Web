@@ -40,11 +40,11 @@ function mostrarPrecio(precio: number): string {
 
 // agregar `ruta` a cada item cuando existan sus pantallas.
 const itemsNavegacion: ItemNavegacion[] = [
-  { etiqueta: 'Inicio', icono: 'inicio' },
+  { etiqueta: 'Inicio', icono: 'inicio' , ruta: '/panel'},
   { etiqueta: 'Pedidos', icono: 'pedidos' },
-  { etiqueta: 'Clientes', icono: 'clientes' },
+  { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
   { etiqueta: 'Reportes', icono: 'reportes' },
-  { etiqueta: 'Usuarios', icono: 'usuario' },
+  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' }
 ]
 
 const columnasInventario: ColumnaTabla[] = [

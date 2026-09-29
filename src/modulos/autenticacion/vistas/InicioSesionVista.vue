@@ -93,12 +93,6 @@ const iniciarSesion = async () => {
           </BotonVue>
         </form>
 
-        <p class="inicio-sesion__registro">
-          <span class="inicio-sesion__registro-texto">¿Nuevo usuario?</span>
-          <button type="button" class="inicio-sesion__enlace inicio-sesion__enlace--fuerte">
-            Regístrate aquí.
-          </button>
-        </p>
       </div>
 
       <footer class="inicio-sesion__pie">

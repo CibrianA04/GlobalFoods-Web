@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, onUnmounted } from 'vue'
 
 import BotonVue from '@/componentes/BotonVue.vue'
 import ChipEstadoVue, { type EstadoPedido } from '@/componentes/ChipEstadoVue.vue'
@@ -16,7 +16,26 @@ const inventario = ref<ArticuloInventario[]>([])
 const cargandoInventario = ref(true)
 const errorInventario = ref('')
 
+// Alturas dinámicas para las tablas
+const altoInventario = ref(250)
+const altoPedidos = ref(200)
+
+const actualizarAlturas = () => {
+  // Si la pantalla es más pequeña que 820px de alto (como en tu laptop)
+  if (window.innerHeight < 820) {
+    altoInventario.value = 180
+    altoPedidos.value = 160
+  } else {
+    // Si estás en un monitor más grande (PC)
+    altoInventario.value = 260
+    altoPedidos.value = 200
+  }
+}
+
 onMounted(async () => {
+  actualizarAlturas()
+  window.addEventListener('resize', actualizarAlturas)
+
   try {
     inventario.value = await obtenerInventarioActual()
   } catch (errorCapturado) {
@@ -26,6 +45,10 @@ onMounted(async () => {
   } finally {
     cargandoInventario.value = false
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', actualizarAlturas)
 })
 
 const formatoPrecio = new Intl.NumberFormat('es-MX', {
@@ -82,6 +105,7 @@ const pedidos: {
     item-activo="Inicio"
   >
     <div class="panel">
+      <!-- Encabezado del panel -->
       <div class="panel__bienvenida">
         <div>
           <h1 class="panel__titulo">Bienvenido de vuelta, {{ nombreUsuario }}</h1>
@@ -98,11 +122,11 @@ const pedidos: {
         </div>
       </div>
 
-      <section>
+      <!-- Sección de Inventario -->
+      <section class="panel__seccion">
         <EncabezadoSeccionVue titulo="Inventario" icono="caja" />
 
-        <!-- 300px permite ver ~7 filas completas sin scroll interno -->
-        <TablaVue :columnas="columnasInventario" :alto-maximo="250">
+        <TablaVue :columnas="columnasInventario" :alto-maximo="altoInventario">
           <tr v-if="cargandoInventario">
             <td colspan="4">Cargando inventario...</td>
           </tr>
@@ -121,11 +145,11 @@ const pedidos: {
         </TablaVue>
       </section>
 
-      <section class="panel__pedidos">
+      <!-- Sección de Pedidos -->
+      <section class="panel__seccion">
         <EncabezadoSeccionVue titulo="Pedidos Actuales" icono="reloj" />
 
-        <!-- 280px se encoge si hay 3 pedidos y habilita scroll si supera ~4-5 pedidos -->
-        <TablaVue :columnas="columnasPedidos" :alto-maximo="280">
+        <TablaVue :columnas="columnasPedidos" :alto-maximo="altoPedidos">
           <tr v-for="pedido in pedidos" :key="pedido.id">
             <td class="panel__id">{{ pedido.id }}</td>
             <td>
@@ -153,7 +177,7 @@ const pedidos: {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   max-width: 1100px;
 }
 
@@ -162,24 +186,25 @@ const pedidos: {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
-.panel__pedidos {
-  margin-top: 8px;
+.panel__seccion {
+  display: flex;
+  flex-direction: column;
 }
 
 .panel__titulo {
   margin: 0;
   color: var(--gf-texto);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
 }
 
 .panel__subtitulo {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   color: var(--gf-texto-tenue);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .panel__accion {
@@ -196,14 +221,14 @@ const pedidos: {
 }
 
 .panel__detalle {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   color: var(--gf-texto-tenue);
   font-size: 12px;
 }
 
 .panel__total {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -216,7 +241,7 @@ const pedidos: {
 
 @media (max-width: 900px) {
   .panel__titulo {
-    font-size: 20px;
+    font-size: 18px;
   }
 }
 

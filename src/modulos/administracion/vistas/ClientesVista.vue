@@ -8,6 +8,9 @@ import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import ModalNuevoCliente from '@/componentes/ModalNuevoCliente.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
+import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+
+const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 
 // Estado para controlar la visibilidad del modal
 const mostrarModal = ref(false)
@@ -72,7 +75,7 @@ const registrarNuevoCliente = (datos: { nombre: string; celular: string; usuario
 <template>
   <LayoutPanelVue
     titulo="Sistema de Venta a Menudeo"
-    usuario="Administrador"
+    :usuario="nombreUsuario"
     :items-navegacion="itemsNavegacion"
     item-activo="Clientes"
   >

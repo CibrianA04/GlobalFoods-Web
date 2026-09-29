@@ -24,6 +24,7 @@ export type NombreIcono =
   | 'menos'
   | 'cerrar'
   | 'alerta'
+  | 'ojo'
 
 export interface Props {
   nombre: NombreIcono
@@ -184,6 +185,10 @@ withDefaults(defineProps<Props>(), {
       <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
       <path d="M12 9v4" />
       <path d="M12 17h.01" />
+    </template>
+    <template v-else-if="nombre === 'ojo'">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
     </template>
   </svg>
 </template>

@@ -7,6 +7,9 @@ import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
+import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+
+const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 
 // Navegación lateral
 const itemsNavegacion: ItemNavegacion[] = [
@@ -74,7 +77,7 @@ const pedidos = [
 <template>
   <LayoutPanelVue
     titulo="Sistema de Venta a Menudeo"
-    usuario="Administrador"
+    :usuario="nombreUsuario"
     :items-navegacion="itemsNavegacion"
     item-activo="Clientes"
   >

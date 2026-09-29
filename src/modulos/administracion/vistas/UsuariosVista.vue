@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import BotonVue from '@/componentes/BotonVue.vue'
 import EncabezadoSeccionVue from '@/componentes/EncabezadoSeccionVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
@@ -7,9 +7,39 @@ import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import ModalNuevoUsuario from '@/componentes/ModalNuevoUsuario.vue'
+import ModalConfirmacion from '@/componentes/ModalConfirmacion.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
+import {
+  obtenerUsuarios,
+  crearUsuarioAPI,
+  actualizarUsuarioAPI,
+  eliminarUsuarioAPI,
+  type UsuarioAPI,
+} from '../servicios/servicioUsuarios'
+import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+
+const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 
 const mostrarModal = ref(false)
+const usuarioSeleccionado = ref<UsuarioAPI | null>(null)
+
+// Estados para el modal de eliminación
+const mostrarModalConfirmacion = ref(false)
+const usuarioAEliminar = ref<UsuarioAPI | null>(null)
+
+const usuarios = ref<UsuarioAPI[]>([])
+const cargando = ref(true)
+const errorCarga = ref('')
+
+const contrasenasVisibles = ref<Set<number>>(new Set())
+
+const toggleMostrarContrasena = (id: number) => {
+  if (contrasenasVisibles.value.has(id)) {
+    contrasenasVisibles.value.delete(id)
+  } else {
+    contrasenasVisibles.value.add(id)
+  }
+}
 
 const itemsNavegacion: ItemNavegacion[] = [
   { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
@@ -23,76 +53,89 @@ const columnasUsuarios: ColumnaTabla[] = [
   { clave: 'tipo', etiqueta: 'TIPO' },
   { clave: 'nombre', etiqueta: 'NOMBRE' },
   { clave: 'usuario', etiqueta: 'USUARIO' },
-  { clave: 'celular', etiqueta: 'CELULAR' },
   { clave: 'contrasena', etiqueta: 'CONTRASEÑA' },
   { clave: 'estado', etiqueta: 'ESTADO' },
   { clave: 'cambios', etiqueta: 'CAMBIOS', alineacion: 'centro' },
 ]
 
-interface Usuario {
-  id: number
-  tipo: 'ADMIN' | 'EMPLEADO' | 'REPORTE'
-  nombre: string
-  usuario: string
-  celular: string
-  contrasena: string
-  estado: 'activo' | 'inactivo'
+const cargarDatosUsuarios = async () => {
+  cargando.value = true
+  errorCarga.value = ''
+  try {
+    usuarios.value = await obtenerUsuarios()
+  } catch (err: any) {
+    errorCarga.value = err.message || 'Ocurrió un error al cargar los usuarios.'
+  } finally {
+    cargando.value = false
+  }
 }
 
-const usuarios = ref<Usuario[]>([
-  {
-    id: 1,
-    tipo: 'ADMIN',
-    nombre: 'Roberto Valenzuela Arce',
-    usuario: 'OBB123',
-    celular: '6670000000',
-    contrasena: 'XXXXXXXXXX',
-    estado: 'activo',
-  },
-  {
-    id: 2,
-    tipo: 'EMPLEADO',
-    nombre: 'Cesar Enrique Verdugo Varela',
-    usuario: 'CERQ123',
-    celular: '6670000000',
-    contrasena: 'XXXXXXXXXX',
-    estado: 'inactivo',
-  },
-  {
-    id: 3,
-    tipo: 'REPORTE',
-    nombre: 'Dianne Parroquin Diaz',
-    usuario: 'DIAN123',
-    celular: '6670000000',
-    contrasena: 'XXXXXXXXXX',
-    estado: 'activo',
-  },
-])
+onMounted(() => {
+  cargarDatosUsuarios()
+})
 
-const registrarNuevoUsuario = (datos: {
-  tipo: 'ADMIN' | 'EMPLEADO' | 'REPORTE'
+const abrirModalCrear = () => {
+  usuarioSeleccionado.value = null
+  mostrarModal.value = true
+}
+
+const abrirModalEditar = (usr: UsuarioAPI) => {
+  usuarioSeleccionado.value = usr
+  mostrarModal.value = true
+}
+
+const guardarUsuario = async (datos: {
+  tipoUsuario: string
   nombre: string
-  celular: string
   usuario: string
   contrasena: string
 }) => {
-  const nuevoId = usuarios.value.length + 1
-  usuarios.value.push({
-    id: nuevoId,
-    tipo: datos.tipo,
-    nombre: datos.nombre,
-    usuario: datos.usuario,
-    celular: datos.celular,
-    contrasena: 'XXXXXXXXXX',
-    estado: 'activo',
-  })
+  try {
+    const payload = {
+      usuario: datos.usuario,
+      contrasena: datos.contrasena,
+      nombre: datos.nombre,
+      tipoUsuario: datos.tipoUsuario,
+      estatus: 1,
+    }
+
+    if (usuarioSeleccionado.value) {
+      await actualizarUsuarioAPI(usuarioSeleccionado.value.Id, payload)
+    } else {
+      await crearUsuarioAPI(payload)
+    }
+
+    await cargarDatosUsuarios()
+  } catch (err: any) {
+    alert(err.message || 'Error al guardar el usuario')
+  }
+}
+
+// Abrir el modal de confirmación pasando el usuario seleccionado
+const solicitarEliminarUsuario = (usr: UsuarioAPI) => {
+  usuarioAEliminar.value = usr
+  mostrarModalConfirmacion.value = true
+}
+
+// Confirmar y eliminar a través de la API
+const confirmarEliminacion = async () => {
+  if (!usuarioAEliminar.value) return
+
+  try {
+    await eliminarUsuarioAPI(usuarioAEliminar.value.Id)
+    mostrarModalConfirmacion.value = false
+    usuarioAEliminar.value = null
+    await cargarDatosUsuarios()
+  } catch (err: any) {
+    alert(err.message || 'Error al eliminar el usuario')
+  }
 }
 </script>
 
 <template>
   <LayoutPanelVue
     titulo="Sistema de Venta a Menudeo"
-    usuario="Administrador"
+    :usuario="nombreUsuario"
     :items-navegacion="itemsNavegacion"
     item-activo="Usuarios"
   >
@@ -106,7 +149,7 @@ const registrarNuevoUsuario = (datos: {
         </div>
 
         <div class="panel__accion">
-          <BotonVue variante="exito" @click="mostrarModal = true">
+          <BotonVue variante="exito" @click="abrirModalCrear">
             <IconoVue nombre="mas" :tamano="16" />
             Nuevo Usuario
           </BotonVue>
@@ -116,25 +159,61 @@ const registrarNuevoUsuario = (datos: {
       <section>
         <EncabezadoSeccionVue titulo="Usuarios" icono="usuario" />
 
-        <TablaVue :columnas="columnasUsuarios">
-          <tr v-for="usr in usuarios" :key="usr.id">
-            <td class="panel__texto-fuerte">{{ usr.tipo }}</td>
-            <td class="panel__texto-nombre">{{ usr.nombre }}</td>
-            <td class="panel__texto-fuerte">{{ usr.usuario }}</td>
-            <td class="panel__texto-fuerte">{{ usr.celular }}</td>
-            <td class="panel__texto-fuerte">{{ usr.contrasena }}</td>
+        <div v-if="cargando" class="panel__estado-carga">
+          Cargando usuarios...
+        </div>
+
+        <div v-else-if="errorCarga" class="panel__estado-error">
+          {{ errorCarga }}
+        </div>
+
+        <TablaVue v-else :columnas="columnasUsuarios">
+          <tr v-for="usr in usuarios" :key="usr.Id">
+            <td class="panel__texto-fuerte">{{ usr.TipoUsuario || 'Empleado' }}</td>
+            <td class="panel__texto-nombre">{{ usr.Nombre }}</td>
+            <td class="panel__texto-fuerte">{{ usr.Usuario }}</td>
+            <td class="panel__texto-fuerte">
+              <div class="panel__contrasena-celda">
+                <span>
+                  <template v-if="contrasenasVisibles.has(usr.Id)">
+                    {{ usr.Contraseña || (usr as any).Contrasena || 'Sin contraseña' }}
+                  </template>
+                  <template v-else>
+                    ••••••••
+                  </template>
+                </span>
+                <button
+                  type="button"
+                  class="btn-ojo"
+                  :aria-label="contrasenasVisibles.has(usr.Id) ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  @click="toggleMostrarContrasena(usr.Id)"
+                >
+                  <IconoVue nombre="ojo" :tamano="16" />
+                </button>
+              </div>
+            </td>
             <td>
               <ChipEstadoVue
-                :estado="usr.estado === 'activo' ? 'entregado' : 'en_preparacion'"
-                :etiqueta="usr.estado === 'activo' ? 'Activo' : 'Inactivo'"
+                :estado="usr.Estatus === 1 ? 'entregado' : 'en_preparacion'"
+                :etiqueta="usr.Estatus === 1 ? 'Activo' : 'Inactivo'"
               />
             </td>
             <td class="tabla__celda--centro">
               <div class="panel__acciones-fila">
-                <button type="button" class="btn-accion btn-accion--editar" aria-label="Editar usuario">
+                <button
+                  type="button"
+                  class="btn-accion btn-accion--editar"
+                  aria-label="Editar usuario"
+                  @click="abrirModalEditar(usr)"
+                >
                   <IconoVue nombre="lapiz" :tamano="16" />
                 </button>
-                <button type="button" class="btn-accion btn-accion--eliminar" aria-label="Eliminar usuario">
+                <button
+                  type="button"
+                  class="btn-accion btn-accion--eliminar"
+                  aria-label="Eliminar usuario"
+                  @click="solicitarEliminarUsuario(usr)"
+                >
                   <IconoVue nombre="basura" :tamano="16" />
                 </button>
               </div>
@@ -145,11 +224,22 @@ const registrarNuevoUsuario = (datos: {
     </div>
   </LayoutPanelVue>
 
-  <!-- Modal para registrar nuevo usuario -->
+  <!-- Modal para crear / editar usuario -->
   <ModalNuevoUsuario
     :mostrar="mostrarModal"
+    :usuario-editar="usuarioSeleccionado"
     @cerrar="mostrarModal = false"
-    @guardar="registrarNuevoUsuario"
+    @guardar="guardarUsuario"
+  />
+
+  <!-- Modal para confirmar eliminación -->
+  <ModalConfirmacion
+    :mostrar="mostrarModalConfirmacion"
+    titulo="¿Eliminar usuario?"
+    :mensaje="`¿Estás seguro de que deseas eliminar al usuario '${usuarioAEliminar?.Nombre}'?`"
+    texto-boton-confirmar="Eliminar"
+    @cerrar="mostrarModalConfirmacion = false"
+    @confirmar="confirmarEliminacion"
   />
 </template>
 
@@ -196,11 +286,48 @@ const registrarNuevoUsuario = (datos: {
   color: var(--gf-texto);
 }
 
+.panel__contrasena-celda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-ojo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--gf-texto-tenue);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.btn-ojo:hover {
+  color: var(--gf-primario);
+}
+
 .panel__acciones-fila {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.panel__estado-carga,
+.panel__estado-error {
+  padding: 24px;
+  text-align: center;
+  border: 1px solid var(--gf-borde);
+  border-radius: var(--gf-radio);
+  background: var(--gf-superficie);
+  font-size: 14px;
+}
+
+.panel__estado-error {
+  color: var(--gf-cancelado-fg);
+  border-color: var(--gf-cancelado-punto);
 }
 
 .btn-accion {

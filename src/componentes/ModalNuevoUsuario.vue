@@ -1,34 +1,62 @@
-2<script setup lang="ts">
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, watch } from 'vue'
 import logo from '@/recursos/logo-transparente.png'
 import BotonVue from '@/componentes/BotonVue.vue'
 import CampoTextoVue from '@/componentes/CampoTextoVue.vue'
+import type { UsuarioAPI } from '@/modulos/administracion/servicios/servicioUsuarios'
 
-type TipoUsuario = 'ADMIN' | 'EMPLEADO' | 'REPORTE'
+type TipoUsuario = 'Administrador' | 'Empleado' | 'Reporte'
 
 interface Props {
   mostrar: boolean
+  usuarioEditar?: UsuarioAPI | null
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'cerrar'): void
-  (e: 'guardar', datos: { tipo: TipoUsuario; nombre: string; celular: string; usuario: string; contrasena: string }): void
+  (e: 'guardar', datos: { tipoUsuario: string; nombre: string; usuario: string; contrasena: string }): void
 }>()
 
-const tipoSeleccionado = ref<TipoUsuario>('ADMIN')
+const tipoSeleccionado = ref<TipoUsuario>('Administrador')
 const nombre = ref('')
-const celular = ref('')
 const usuario = ref('')
 const contrasena = ref('')
 const aceptoTerminos = ref(false)
 
+// Escuchar cambios en la prop 'usuarioEditar' para precargar los datos o limpiar el formulario
+watch(
+  () => props.usuarioEditar,
+  (nuevoUsuario) => {
+    if (nuevoUsuario) {
+      nombre.value = nuevoUsuario.Nombre || ''
+      usuario.value = nuevoUsuario.Usuario || ''
+      contrasena.value = nuevoUsuario.Contraseña || ''
+      
+      const tipo = nuevoUsuario.TipoUsuario || 'Administrador'
+      if (tipo === 'Administrador' || tipo === 'Empleado' || tipo === 'Reporte') {
+        tipoSeleccionado.value = tipo
+      } else {
+        tipoSeleccionado.value = 'Administrador'
+      }
+      aceptoTerminos.value = true // Al editar, permitir guardar directo
+    } else {
+      // Limpiar formulario para nuevo registro
+      nombre.value = ''
+      usuario.value = ''
+      contrasena.value = ''
+      tipoSeleccionado.value = 'Administrador'
+      aceptoTerminos.value = false
+    }
+  },
+  { immediate: true }
+)
+
 const handleGuardar = () => {
   emit('guardar', {
-    tipo: tipoSeleccionado.value,
+    tipoUsuario: tipoSeleccionado.value,
     nombre: nombre.value,
-    celular: celular.value,
     usuario: usuario.value,
     contrasena: contrasena.value,
   })
@@ -52,24 +80,24 @@ const handleGuardar = () => {
             <button
               type="button"
               class="modal__tab"
-              :class="{ 'modal__tab--activo': tipoSeleccionado === 'ADMIN' }"
-              @click="tipoSeleccionado = 'ADMIN'"
+              :class="{ 'modal__tab--activo': tipoSeleccionado === 'Administrador' }"
+              @click="tipoSeleccionado = 'Administrador'"
             >
               Admin
             </button>
             <button
               type="button"
               class="modal__tab"
-              :class="{ 'modal__tab--activo': tipoSeleccionado === 'EMPLEADO' }"
-              @click="tipoSeleccionado = 'EMPLEADO'"
+              :class="{ 'modal__tab--activo': tipoSeleccionado === 'Empleado' }"
+              @click="tipoSeleccionado = 'Empleado'"
             >
               Empleado
             </button>
             <button
               type="button"
               class="modal__tab"
-              :class="{ 'modal__tab--activo': tipoSeleccionado === 'REPORTE' }"
-              @click="tipoSeleccionado = 'REPORTE'"
+              :class="{ 'modal__tab--activo': tipoSeleccionado === 'Reporte' }"
+              @click="tipoSeleccionado = 'Reporte'"
             >
               Reporte
             </button>
@@ -81,14 +109,6 @@ const handleGuardar = () => {
               v-model="nombre"
               etiqueta="Nombre"
               marcador="Nombre completo"
-            />
-
-            <CampoTextoVue
-              id="usuario-celular"
-              v-model="celular"
-              etiqueta="Celular"
-              tipo="tel"
-              marcador="+52 000 000 0000"
             />
 
             <CampoTextoVue
@@ -115,7 +135,7 @@ const handleGuardar = () => {
 
             <div class="modal__boton-wrap">
               <BotonVue tipo="submit" variante="primario" :deshabilitado="!aceptoTerminos">
-                Registrar
+                {{ usuarioEditar ? 'Guardar Cambios' : 'Registrar' }}
               </BotonVue>
             </div>
           </form>
@@ -169,7 +189,6 @@ const handleGuardar = () => {
   background: var(--gf-superficie);
 }
 
-/* Estilos de las pestañas */
 .modal__tabs {
   display: flex;
   justify-content: center;

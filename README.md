@@ -73,6 +73,7 @@ GlobalFoods-Web/
 │  │  ├─ logo-transparente.png
 │  │  └─ CamaronesInicioSesion.jpg
 │  ├─ componentes/
+│  │  ├─ AvisoVue.vue
 │  │  ├─ BarraLateralVue.vue
 │  │  ├─ BotonVue.vue
 │  │  ├─ CampoTextoVue.vue
@@ -81,6 +82,7 @@ GlobalFoods-Web/
 │  │  ├─ EncabezadoSeccionVue.vue
 │  │  ├─ IconoVue.vue
 │  │  ├─ LayoutPanelVue.vue
+│  │  ├─ ModalVue.vue
 │  │  ├─ PiePanelVue.vue
 │  │  ├─ TablaVue.vue
 │  │  ├─ TarjetaProductoVue.vue
@@ -97,6 +99,11 @@ GlobalFoods-Web/
 │  │  │  └─ vistas/PanelVue.vue
 │  │  ├─ reparto/
 │  │  └─ ventas/
+│  │     ├─ componentes/    # secciones y modales de Nuevo pedido
+│  │     ├─ controladores/  # usarNuevoPedido, usarBuscadorClientes, formatosPedido
+│  │     ├─ interfaces/     # cliente.ts, pedido.ts
+│  │     ├─ servicios/      # servicioClientes.ts, servicioPedidos.ts (simulados)
+│  │     └─ vistas/NuevoPedidoVista.vue
 │  └─ pruebas/
 ```
 
@@ -107,6 +114,7 @@ El enrutador está configurado con estas rutas principales:
 - `/inicio-sesion` — pantalla de acceso
 - `/panel` — vista principal del sistema
 - `/usuarios` — listado de usuarios
+- `/pedidos/nuevo` — captura y registro de un pedido (nombre de ruta `nuevo-pedido`)
 - `/` — redirige a `/inicio-sesion`
 
 ## Organización y convenciones
@@ -133,7 +141,9 @@ El enrutador está configurado con estas rutas principales:
 
 ## Estado del proyecto
 
-La interfaz de inicio de sesión consulta `POST /api/auth/login`, conserva el token de acceso y dirige al panel. Las vistas de inventario y usuarios siguen usando datos de demostración.
+La interfaz de inicio de sesión consulta `POST /api/auth/login`, conserva el token de acceso y dirige al panel. El panel y Nuevo pedido leen el inventario real de `GET /api/inventario/actual`. Las vistas de usuarios y clientes siguen usando datos de demostración.
+
+La pantalla **Nuevo pedido** (`/pedidos/nuevo`, módulo de ventas) captura cliente, productos y entrega, pide confirmación y registra el pedido. La búsqueda de clientes y el registro todavía son simulados en `src/modulos/ventas/servicios/`, porque la API aún no tiene `GET /api/clientes` ni `POST /api/pedidos`. Cada servicio documenta el endpoint propuesto; al conectarlo solo cambia el cuerpo de la función.
 
 ## Documentación complementaria
 

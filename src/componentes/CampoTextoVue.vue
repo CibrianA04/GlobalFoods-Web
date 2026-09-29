@@ -1,7 +1,11 @@
 <script setup lang="ts">
 // Campo de texto reutilizable.
 
-type IconoCampo = 'usuario' | 'candado'
+import { computed } from 'vue'
+
+import IconoVue from '@/componentes/IconoVue.vue'
+
+type IconoCampo = 'usuario' | 'candado' | 'lupa'
 
 type TipoCampo = 'text' | 'password' | 'email' | 'tel' | 'number' | 'search' | 'date'
 
@@ -19,14 +23,26 @@ interface Props {
   deshabilitado?: boolean
   /** Mensaje de error. Si trae texto, se pinta debajo del campo. */
   error?: string
+  /** Pinta un asterisco en la etiqueta y marca el input con aria-required. */
+  obligatorio?: boolean
+  /** Etiqueta y texto más chicos, para formularios con muchos campos. */
+  compacto?: boolean
+  /**
+   * Texto de apoyo debajo del campo, enlazado con aria-describedby y anunciado al cambiar.
+   * Pasa `''` para dejar lista la región aunque todavía no haya texto; sin la prop no se pinta.
+   */
+  ayuda?: string
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   tipo: 'text',
   marcador: '',
   icono: undefined,
   deshabilitado: false,
   error: '',
+  obligatorio: false,
+  compacto: false,
+  ayuda: undefined,
 })
 
 // Los atributos que no son props (autocomplete, maxlength, inputmode...)
@@ -34,12 +50,21 @@ withDefaults(defineProps<Props>(), {
 defineOptions({ inheritAttrs: false })
 
 const valor = defineModel<string>({ default: '' })
+
+const descritoPor = computed(() => {
+  const ids: string[] = []
+  if (props.error) ids.push(`${props.id}-error`)
+  if (props.ayuda) ids.push(`${props.id}-ayuda`)
+  return ids.length ? ids.join(' ') : undefined
+})
 </script>
 
 <template>
-  <div class="campo" :class="{ 'campo--con-error': !!error }">
+  <div class="campo" :class="{ 'campo--con-error': !!error, 'campo--compacto': compacto }">
     <div class="campo__cabecera">
-      <label class="campo__etiqueta" :for="id">{{ etiqueta }}</label>
+      <label class="campo__etiqueta" :for="id">
+        {{ etiqueta }}<span v-if="obligatorio" class="campo__obligatorio" aria-hidden="true"> *</span>
+      </label>
       <!-- Hueco a la derecha de la etiqueta para un enlace o una acción. -->
       <slot name="accion" />
     </div>
@@ -59,6 +84,8 @@ const valor = defineModel<string>({ default: '' })
             d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v1.5c0 .28.22.5.5.5h15c.28 0 .5-.22.5-.5V18c0-2.66-5.33-4-8-4Z"
           />
         </svg>
+
+        <IconoVue v-else-if="icono === 'lupa'" nombre="lupa" :tamano="18" />
 
         <svg
           v-else
@@ -82,22 +109,22 @@ const valor = defineModel<string>({ default: '' })
         :type="tipo"
         :placeholder="marcador"
         :disabled="deshabilitado"
+        :aria-required="obligatorio || undefined"
         :aria-invalid="error ? true : undefined"
-        :aria-describedby="error ? id + '-error' : undefined"
+        :aria-describedby="descritoPor"
         v-bind="$attrs"
       />
     </div>
 
     <p v-if="error" :id="id + '-error'" class="campo__error">{{ error }}</p>
+    <p v-if="ayuda !== undefined" :id="id + '-ayuda'" class="campo__ayuda" aria-live="polite">{{ ayuda }}</p>
   </div>
 </template>
 
 <style scoped>
 .campo {
-  /* Gris del relleno del campo. Todavía no existe un token de marca para
-     este tono, así que queda como variable local y se puede sobrescribir
-     desde fuera con `--campo-fondo`. */
-  --campo-fondo: #f1f4f7;
+  /* Gris del relleno del campo. Se puede sobrescribir desde fuera con `--campo-fondo`. */
+  --campo-fondo: var(--gf-campo-fondo);
 
   display: flex;
   flex-direction: column;
@@ -116,6 +143,10 @@ const valor = defineModel<string>({ default: '' })
   font-size: 18px;
   font-weight: 500;
   color: var(--gf-texto);
+}
+
+.campo__obligatorio {
+  color: var(--gf-cancelado-punto);
 }
 
 .campo__caja {
@@ -177,9 +208,37 @@ const valor = defineModel<string>({ default: '' })
   cursor: not-allowed;
 }
 
+.campo__entrada:read-only:not(:disabled) {
+  cursor: default;
+}
+
 .campo__error {
   margin: 0;
   font-size: 14px;
   color: var(--gf-cancelado-punto);
+}
+
+.campo__ayuda {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gf-texto-tenue);
+}
+
+/* La región de ayuda existe aunque esté vacía (para que se anuncie al cambiar);
+   vacía no debe dejar el hueco del gap. */
+.campo__ayuda:empty {
+  margin-top: -6px;
+}
+
+.campo--compacto .campo__etiqueta {
+  font-size: 14px;
+}
+
+.campo--compacto .campo__entrada {
+  font-size: 15px;
+}
+
+.campo--compacto .campo__error {
+  font-size: 13px;
 }
 </style>

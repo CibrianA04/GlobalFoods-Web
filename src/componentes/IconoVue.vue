@@ -16,6 +16,14 @@ export type NombreIcono =
   | 'basura'
   | 'candado'
   | 'flecha-izquierda'
+  | 'lupa'
+  | 'camion'
+  | 'check'
+  | 'calendario'
+  | 'congeladora'
+  | 'menos'
+  | 'cerrar'
+  | 'alerta'
 
 export interface Props {
   nombre: NombreIcono
@@ -130,6 +138,52 @@ withDefaults(defineProps<Props>(), {
 
     <template v-else-if="nombre === 'flecha-izquierda'">
       <polyline points="15 18 9 12 15 6" />
+    </template>
+
+    <template v-else-if="nombre === 'lupa'">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20.5 20.5-4.5-4.5" />
+    </template>
+
+    <template v-else-if="nombre === 'camion'">
+      <path d="M14 17.5V6a1 1 0 0 0-1-1H3.5a1 1 0 0 0-1 1v10.5a1 1 0 0 0 1 1H5" />
+      <path d="M14 8.5h3.6a1 1 0 0 1 .8.4l2.9 3.8a1 1 0 0 1 .2.6v3.2a1 1 0 0 1-1 1H19" />
+      <path d="M9 17.5h6" />
+      <circle cx="7" cy="17.5" r="2" />
+      <circle cx="17" cy="17.5" r="2" />
+    </template>
+
+    <template v-else-if="nombre === 'check'">
+      <path d="M20 6 9 17l-5-5" />
+    </template>
+
+    <template v-else-if="nombre === 'calendario'">
+      <rect x="3" y="4.5" width="18" height="16.5" rx="2" />
+      <path d="M8 2.5v4" />
+      <path d="M16 2.5v4" />
+      <path d="M3 10h18" />
+    </template>
+
+    <template v-else-if="nombre === 'congeladora'">
+      <rect x="5" y="2.5" width="14" height="19" rx="2" />
+      <path d="M5 10h14" />
+      <path d="M8.5 5.5v2" />
+      <path d="M8.5 13v3" />
+    </template>
+
+    <template v-else-if="nombre === 'menos'">
+      <path d="M5 12h14" />
+    </template>
+
+    <template v-else-if="nombre === 'cerrar'">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </template>
+
+    <template v-else-if="nombre === 'alerta'">
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
     </template>
   </svg>
 </template>

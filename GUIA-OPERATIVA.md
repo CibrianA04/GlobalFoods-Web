@@ -108,7 +108,25 @@ Se encarga del módulo de administración y usuarios.
 - Ruta: `/usuarios`
 - Vista: `src/modulos/administracion/vistas/UsuariosVista.vue`
 
-### Ventas, almacén y reparto
+### Ventas
+
+Contiene la pantalla **Nuevo pedido**: el asesor busca un cliente registrado, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
+
+- Ruta: `/pedidos/nuevo` (nombre `nuevo-pedido`, requiere sesión). Se abre con el botón "Nuevo Pedido" del panel.
+- Vista: `src/modulos/ventas/vistas/NuevoPedidoVista.vue`
+- Componentes: `src/modulos/ventas/componentes/` (secciones Cliente, Productos y Entrega, resumen lateral y modales Agregar producto, Confirmar pedido y Descartar pedido)
+- Estado y validaciones: `src/modulos/ventas/controladores/usarNuevoPedido.ts` (formulario) y `usarBuscadorClientes.ts` (búsqueda de clientes)
+- Tipos: `src/modulos/ventas/interfaces/cliente.ts` y `pedido.ts`
+- Servicios:
+  - Productos: reales, de `GET /api/inventario/actual` (`src/modulos/almacen/servicios/servicioInventario.ts`).
+  - Clientes: **simulado** en `servicioClientes.ts`. Endpoint propuesto `GET /api/clientes?busqueda=`, todavía no existe.
+  - Registro: **simulado** en `servicioPedidos.ts`. Endpoint propuesto `POST /api/pedidos`, todavía no existe. Devuelve folios consecutivos desde `#12348`.
+
+Para probar los mensajes de error sin API, cambia a `true` las constantes `FORZAR_ERROR_BUSQUEDA` (en `servicioClientes.ts`) o `FORZAR_ERROR_REGISTRO` (en `servicioPedidos.ts`). Regrésalas a `false` antes de subir cambios. Si la API no está corriendo, la sección Productos muestra "No es posible confirmar la disponibilidad en este momento." y no deja agregar productos.
+
+Si hay datos capturados, salir de la pantalla por el menú lateral, el botón atrás del navegador o "Cancelar" pide confirmar que se descartan. Recargar la página o cerrar la pestaña no pide confirmación.
+
+### Almacén y reparto
 
 Están diseñados para alojar las pantallas de cada área del negocio. Actualmente el proyecto ya define la estructura base y los módulos visuales principales, y está listo para ampliarse con lógica real de negocio.
 
@@ -120,6 +138,7 @@ El enrutador usa historial HTML5 configurado con Vue Router:
 - `/inicio-sesion`
 - `/panel`
 - `/usuarios`
+- `/pedidos/nuevo`
 
 ## 10. Convenciones de desarrollo
 

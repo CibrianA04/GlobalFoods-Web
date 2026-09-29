@@ -46,14 +46,16 @@ withDefaults(defineProps<Props>(), {
   background: var(--gf-fondo);
 }
 
-/* Tarjeta blanca centrada con ancho máximo (el del diseño); encabezado y pie quedan de lado a lado. */
+/* Tarjeta blanca centrada con ancho máximo (el del diseño); encabezado y pie quedan de lado a lado.
+   overflow: clip recorta las esquinas igual que hidden, pero sin crear un contenedor de scroll,
+   así `position: sticky` funciona dentro del contenido (p. ej. el resumen de Nuevo pedido). */
 .layout__cuerpo {
   display: grid;
   grid-template-columns: 156px minmax(0, 1fr);
   width: calc(100% - 48px);
   max-width: 1440px;
   margin: 24px auto;
-  overflow: hidden;
+  overflow: clip;
   border-radius: var(--gf-radio);
   background: var(--gf-superficie);
   box-shadow: 0 2px 12px color-mix(in srgb, var(--gf-primario) 8%, transparent);

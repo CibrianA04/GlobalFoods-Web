@@ -5,6 +5,8 @@ export interface ColumnaTabla {
   /** Texto del encabezado. */
   etiqueta: string
   alineacion?: 'izquierda' | 'centro' | 'derecha'
+  /** Oculta el texto del encabezado a la vista, pero lo deja para lectores de pantalla (columnas de acciones). */
+  ocultarEtiqueta?: boolean
 }
 
 export interface Props {
@@ -32,7 +34,8 @@ defineProps<Props>()
             scope="col"
             :class="`tabla__celda--${columna.alineacion ?? 'izquierda'}`"
           >
-            {{ columna.etiqueta }}
+            <span v-if="columna.ocultarEtiqueta" class="visualmente-oculto">{{ columna.etiqueta }}</span>
+            <template v-else>{{ columna.etiqueta }}</template>
           </th>
         </tr>
       </thead>

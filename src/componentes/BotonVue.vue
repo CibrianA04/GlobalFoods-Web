@@ -8,6 +8,8 @@ interface Props {
   variante?: 'primario' | 'secundario' | 'exito'
   /** Botón redondo chico que solo lleva un icono. Requiere `aria-label`. */
   soloIcono?: boolean
+  /** Versión más baja (34 px) para acciones dentro de tarjetas, tablas o encabezados de sección. */
+  compacto?: boolean
   deshabilitado?: boolean
   /** Muestra un girador y bloquea el botón mientras dura una operación. */
   cargando?: boolean
@@ -17,6 +19,7 @@ withDefaults(defineProps<Props>(), {
   tipo: 'button',
   variante: 'primario',
   soloIcono: false,
+  compacto: false,
   deshabilitado: false,
   cargando: false,
 })
@@ -25,7 +28,7 @@ withDefaults(defineProps<Props>(), {
 <template>
   <button
     class="boton"
-    :class="[`boton--${variante}`, { 'boton--solo-icono': soloIcono }]"
+    :class="[`boton--${variante}`, { 'boton--solo-icono': soloIcono, 'boton--compacto': compacto }]"
     :type="tipo"
     :disabled="deshabilitado || cargando"
     :aria-busy="cargando || undefined"
@@ -91,6 +94,13 @@ withDefaults(defineProps<Props>(), {
 
 .boton--exito:hover:not(:disabled) {
   background: color-mix(in srgb, var(--gf-entregado-punto) 85%, var(--gf-texto));
+}
+
+.boton--compacto {
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
 .boton--solo-icono {

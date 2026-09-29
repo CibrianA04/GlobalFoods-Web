@@ -93,8 +93,7 @@ const pedidos: {
         </div>
 
         <div class="panel__accion">
-          <!-- TODO: abrir la pantalla de nuevo pedido cuando exista. -->
-          <BotonVue variante="exito">
+          <BotonVue variante="exito" @click="$router.push({ name: 'nuevo-pedido' })">
             <IconoVue nombre="mas" :tamano="16" />
             Nuevo Pedido
           </BotonVue>

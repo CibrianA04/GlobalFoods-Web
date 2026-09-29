@@ -7,6 +7,7 @@ import { nextTick, onMounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import AvisoVue from '@/componentes/AvisoVue.vue'
+import IconoVue from '@/componentes/IconoVue.vue'
 import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
 import ModalAgregarProductoVue from '@/modulos/ventas/componentes/ModalAgregarProductoVue.vue'
@@ -17,6 +18,9 @@ import SeccionClienteVue from '@/modulos/ventas/componentes/SeccionClienteVue.vu
 import SeccionEntregaVue from '@/modulos/ventas/componentes/SeccionEntregaVue.vue'
 import SeccionProductosVue from '@/modulos/ventas/componentes/SeccionProductosVue.vue'
 import { MENSAJES, usarNuevoPedido } from '@/modulos/ventas/controladores/usarNuevoPedido'
+import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+
+const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 
 // Elementos del menú lateral
 const itemsNavegacion: ItemNavegacion[] = [
@@ -125,7 +129,7 @@ onBeforeRouteLeave((destino) => {
 <template>
   <LayoutPanelVue
     titulo="Sistema de Venta a Menudeo"
-    usuario="Administrador"
+    :usuario="nombreUsuario"
     :items-navegacion="itemsNavegacion"
     item-activo="Pedidos"
   >
@@ -140,7 +144,19 @@ onBeforeRouteLeave((destino) => {
         </ol>
       </nav>
 
-      <h1 id="nuevo-pedido-titulo" class="nuevo-pedido__titulo">Nuevo pedido</h1>
+      <!-- Encabezado con botón de regresar -->
+      <div class="nuevo-pedido__encabezado">
+        <button
+          type="button"
+          class="btn-regresar"
+          aria-label="Volver a inicio"
+          @click="alCancelar"
+        >
+          <IconoVue nombre="flecha-izquierda" :tamano="20" />
+        </button>
+        <h1 id="nuevo-pedido-titulo" class="nuevo-pedido__titulo">Nuevo pedido</h1>
+      </div>
+
       <p class="nuevo-pedido__subtitulo">
         Captura el cliente, los productos y los datos de entrega. Al registrarlo, el pedido recibe un folio,
         queda en estado Pendiente y aparece en la lista de almacén.
@@ -250,8 +266,35 @@ onBeforeRouteLeave((destino) => {
   color: var(--gf-texto-tenue);
 }
 
+.nuevo-pedido__encabezado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btn-regresar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--gf-borde);
+  border-radius: 8px;
+  background: var(--gf-superficie);
+  color: var(--gf-texto);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-regresar:hover {
+  background: var(--gf-fondo);
+  border-color: var(--gf-texto-tenue);
+}
+
 .nuevo-pedido__titulo {
-  margin: 12px 0 0;
+  margin: 0;
   color: var(--gf-texto);
   font-size: 24px;
   font-weight: 700;
@@ -286,7 +329,6 @@ onBeforeRouteLeave((destino) => {
   background: var(--gf-superficie);
 }
 
-/* Fijo al desplazar; si no cabe en la pantalla, la lista de productos del resumen se desplaza por dentro. */
 .nuevo-pedido__resumen {
   position: sticky;
   top: 24px;

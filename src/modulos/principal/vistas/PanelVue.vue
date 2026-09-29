@@ -38,9 +38,8 @@ function mostrarPrecio(precio: number): string {
   return formatoPrecio.format(precio)
 }
 
-// agregar `ruta` a cada item cuando existan sus pantallas.
 const itemsNavegacion: ItemNavegacion[] = [
-  { etiqueta: 'Inicio', icono: 'inicio' , ruta: '/panel'},
+  { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
   { etiqueta: 'Pedidos', icono: 'pedidos' },
   { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
   { etiqueta: 'Reportes', icono: 'reportes' },
@@ -61,7 +60,6 @@ const columnasPedidos: ColumnaTabla[] = [
   { clave: 'total', etiqueta: 'Total', alineacion: 'derecha' },
 ]
 
-// Datos provisionales, luego reemplazados por los del backend
 const pedidos: {
   id: string
   cliente: string
@@ -79,7 +77,7 @@ const pedidos: {
 <template>
   <LayoutPanelVue
     titulo="Sistema de Venta a Menudeo"
-    usuario="Administrador"
+    :usuario="nombreUsuario"
     :items-navegacion="itemsNavegacion"
     item-activo="Inicio"
   >
@@ -103,7 +101,8 @@ const pedidos: {
       <section>
         <EncabezadoSeccionVue titulo="Inventario" icono="caja" />
 
-        <TablaVue :columnas="columnasInventario" :alto-maximo="180">
+        <!-- 300px permite ver ~7 filas completas sin scroll interno -->
+        <TablaVue :columnas="columnasInventario" :alto-maximo="250">
           <tr v-if="cargandoInventario">
             <td colspan="4">Cargando inventario...</td>
           </tr>
@@ -125,7 +124,8 @@ const pedidos: {
       <section class="panel__pedidos">
         <EncabezadoSeccionVue titulo="Pedidos Actuales" icono="reloj" />
 
-        <TablaVue :columnas="columnasPedidos" :alto-maximo="170">
+        <!-- 280px se encoge si hay 3 pedidos y habilita scroll si supera ~4-5 pedidos -->
+        <TablaVue :columnas="columnasPedidos" :alto-maximo="280">
           <tr v-for="pedido in pedidos" :key="pedido.id">
             <td class="panel__id">{{ pedido.id }}</td>
             <td>
@@ -150,16 +150,23 @@ const pedidos: {
 </template>
 
 <style scoped>
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1100px;
+}
+
 .panel__bienvenida {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .panel__pedidos {
-  margin-top: 20px;
+  margin-top: 8px;
 }
 
 .panel__titulo {
@@ -175,7 +182,6 @@ const pedidos: {
   font-size: 14px;
 }
 
-/* BotonVue ocupa todo el ancho de su contenedor; este se ajusta al texto. */
 .panel__accion {
   flex: none;
 }

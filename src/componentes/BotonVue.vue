@@ -4,8 +4,8 @@
 interface Props {
   /** Tipo nativo del botón. */
   tipo?: 'button' | 'submit'
-  /** Apariencia: relleno de marca, versión discreta sobre fondo claro o verde de acción positiva. */
-  variante?: 'primario' | 'secundario' | 'exito'
+  /** Apariencia: relleno de marca, versión discreta sobre fondo claro, verde de acción positiva o rojo de peligro. */
+  variante?: 'primario' | 'secundario' | 'exito' | 'peligro' // <-- Agregar 'peligro'
   /** Botón redondo chico que solo lleva un icono. Requiere `aria-label`. */
   soloIcono?: boolean
   /** Versión más baja (34 px) para acciones dentro de tarjetas, tablas o encabezados de sección. */
@@ -101,6 +101,15 @@ withDefaults(defineProps<Props>(), {
   height: 34px;
   padding: 0 12px;
   font-size: 13px;
+}
+/* Variante Peligro (rojo) */
+.boton--peligro {
+  background: var(--gf-cancelado-fg);
+  color: var(--gf-superficie);
+}
+
+.boton--peligro:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gf-cancelado-fg) 85%, black);
 }
 
 .boton--solo-icono {

@@ -4,6 +4,8 @@ import InicioSesionVista from '@/modulos/autenticacion/vistas/InicioSesionVista.
 import PanelVue from '@/modulos/principal/vistas/PanelVue.vue'
 import UsuariosVista from '@/modulos/administracion/vistas/UsuariosVista.vue'
 import { haySesion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import ClientesVista from '@/modulos/administracion/vistas/ClientesVista.vue'
+import DetalleClienteVista from '@/modulos/administracion/vistas/DetalleClienteVista.vue'
 
 const enrutador = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,6 +31,16 @@ const enrutador = createRouter({
       component: UsuariosVista,
       meta: { requiereAutenticacion: true },
     },
+    {
+      path: '/clientes',
+      name: 'clientes',
+      component: ClientesVista
+    },
+    {
+      path: '/detalle-cliente-vista/:id',
+      name: 'detalle-cliente',
+      component: DetalleClienteVista
+    }
   ],
 })
 

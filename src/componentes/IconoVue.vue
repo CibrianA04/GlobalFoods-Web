@@ -14,6 +14,8 @@ export type NombreIcono =
   | 'bolsa'
   | 'lapiz'
   | 'basura'
+  | 'candado'
+  | 'flecha-izquierda'
 
 export interface Props {
   nombre: NombreIcono
@@ -119,6 +121,15 @@ withDefaults(defineProps<Props>(), {
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
       <line x1="10" y1="11" x2="10" y2="17" />
       <line x1="14" y1="11" x2="14" y2="17" />
+    </template>
+
+    <template v-else-if="nombre === 'candado'">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </template>
+
+    <template v-else-if="nombre === 'flecha-izquierda'">
+      <polyline points="15 18 9 12 15 6" />
     </template>
   </svg>
 </template>

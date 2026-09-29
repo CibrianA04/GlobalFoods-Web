@@ -6,85 +6,65 @@ import IconoVue from '@/componentes/IconoVue.vue'
 import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
-import ModalNuevoUsuario from '@/componentes/ModalNuevoUsuario.vue'
+import ModalNuevoCliente from '@/componentes/ModalNuevoCliente.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
 
+// Estado para controlar la visibilidad del modal
 const mostrarModal = ref(false)
 
+// Elementos del menú lateral
 const itemsNavegacion: ItemNavegacion[] = [
   { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
   { etiqueta: 'Pedidos', icono: 'pedidos' },
   { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
   { etiqueta: 'Reportes', icono: 'reportes' },
-  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' },
+  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' }
 ]
 
-const columnasUsuarios: ColumnaTabla[] = [
-  { clave: 'tipo', etiqueta: 'TIPO' },
+// Columnas de la tabla según el diseño de Figma
+const columnasClientes: ColumnaTabla[] = [
   { clave: 'nombre', etiqueta: 'NOMBRE' },
   { clave: 'usuario', etiqueta: 'USUARIO' },
   { clave: 'celular', etiqueta: 'CELULAR' },
-  { clave: 'contrasena', etiqueta: 'CONTRASEÑA' },
   { clave: 'estado', etiqueta: 'ESTADO' },
   { clave: 'cambios', etiqueta: 'CAMBIOS', alineacion: 'centro' },
 ]
 
-interface Usuario {
+interface Cliente {
   id: number
-  tipo: 'ADMIN' | 'EMPLEADO' | 'REPORTE'
   nombre: string
   usuario: string
   celular: string
-  contrasena: string
   estado: 'activo' | 'inactivo'
 }
 
-const usuarios = ref<Usuario[]>([
+// Datos de ejemplo según la captura de Figma
+const clientes = ref<Cliente[]>([
   {
     id: 1,
-    tipo: 'ADMIN',
-    nombre: 'Roberto Valenzuela Arce',
-    usuario: 'OBB123',
+    nombre: 'Restaurante Mar Y Tierra',
+    usuario: 'MYT123',
     celular: '6670000000',
-    contrasena: 'XXXXXXXXXX',
     estado: 'activo',
   },
   {
     id: 2,
-    tipo: 'EMPLEADO',
-    nombre: 'Cesar Enrique Verdugo Varela',
-    usuario: 'CERQ123',
+    nombre: 'Mariscos El Faro',
+    usuario: 'MEF123',
     celular: '6670000000',
-    contrasena: 'XXXXXXXXXX',
     estado: 'inactivo',
-  },
-  {
-    id: 3,
-    tipo: 'REPORTE',
-    nombre: 'Dianne Parroquin Diaz',
-    usuario: 'DIAN123',
-    celular: '6670000000',
-    contrasena: 'XXXXXXXXXX',
-    estado: 'activo',
   },
 ])
 
-const registrarNuevoUsuario = (datos: {
-  tipo: 'ADMIN' | 'EMPLEADO' | 'REPORTE'
-  nombre: string
-  celular: string
-  usuario: string
-  contrasena: string
-}) => {
-  const nuevoId = usuarios.value.length + 1
-  usuarios.value.push({
+// Función que recibe los datos desde el modal cuando se hace clic en Registrar
+const registrarNuevoCliente = (datos: { nombre: string; celular: string; usuario: string; contrasena: string }) => {
+  const nuevoId = clientes.value.length + 1
+  clientes.value.push({
     id: nuevoId,
-    tipo: datos.tipo,
     nombre: datos.nombre,
     usuario: datos.usuario,
     celular: datos.celular,
-    contrasena: 'XXXXXXXXXX',
-    estado: 'activo',
+    estado: 'activo'
   })
 }
 </script>
@@ -94,47 +74,71 @@ const registrarNuevoUsuario = (datos: {
     titulo="Sistema de Venta a Menudeo"
     usuario="Administrador"
     :items-navegacion="itemsNavegacion"
-    item-activo="Usuarios"
+    item-activo="Clientes"
   >
     <div class="panel">
+      <!-- Encabezado de la pantalla -->
       <div class="panel__bienvenida">
         <div>
-          <h1 class="panel__titulo">USUARIOS</h1>
+          <h1 class="panel__titulo">Clientes</h1>
           <p class="panel__subtitulo">
-            Monitorea, modifica, elimina y crea las cuentas ingresadas.
+            Monitorea, modifica, elimina y crea las cuentas de Clientes.
           </p>
         </div>
 
         <div class="panel__accion">
           <BotonVue variante="exito" @click="mostrarModal = true">
             <IconoVue nombre="mas" :tamano="16" />
-            Nuevo Usuario
+            Nuevo Cliente
           </BotonVue>
         </div>
       </div>
 
+      <!-- Sección de la tabla de clientes -->
       <section>
-        <EncabezadoSeccionVue titulo="Usuarios" icono="usuario" />
+        <EncabezadoSeccionVue titulo="Clientes" icono="clientes" />
 
-        <TablaVue :columnas="columnasUsuarios">
-          <tr v-for="usr in usuarios" :key="usr.id">
-            <td class="panel__texto-fuerte">{{ usr.tipo }}</td>
-            <td class="panel__texto-nombre">{{ usr.nombre }}</td>
-            <td class="panel__texto-fuerte">{{ usr.usuario }}</td>
-            <td class="panel__texto-fuerte">{{ usr.celular }}</td>
-            <td class="panel__texto-fuerte">{{ usr.contrasena }}</td>
+        <TablaVue :columnas="columnasClientes">
+          <tr 
+            v-for="cliente in clientes" 
+            :key="cliente.id"
+            class="fila-clicable"
+            @click="$router.push(`/detalle-cliente-vista/${cliente.id}`)"
+          >
+            <td class="panel__texto-nombre">{{ cliente.nombre }}</td>
+            <td class="panel__texto-fuerte">{{ cliente.usuario }}</td>
+            <td class="panel__texto-fuerte">{{ cliente.celular }}</td>
             <td>
               <ChipEstadoVue
-                :estado="usr.estado === 'activo' ? 'entregado' : 'en_preparacion'"
-                :etiqueta="usr.estado === 'activo' ? 'Activo' : 'Inactivo'"
+                :estado="cliente.estado === 'activo' ? 'entregado' : 'en_preparacion'"
+                :etiqueta="cliente.estado === 'activo' ? 'Activo' : 'Inactivo'"
               />
             </td>
             <td class="tabla__celda--centro">
               <div class="panel__acciones-fila">
-                <button type="button" class="btn-accion btn-accion--editar" aria-label="Editar usuario">
+                <!-- .stop evita que el click en el botón active el click de la fila -->
+                <button 
+                  type="button" 
+                  class="btn-accion btn-accion--seguridad" 
+                  aria-label="Seguridad cliente"
+                  @click.stop
+                >
+                  <IconoVue nombre="candado" :tamano="16" />
+                </button>
+                <button 
+                  type="button" 
+                  class="btn-accion btn-accion--editar" 
+                  aria-label="Editar cliente"
+                  @click.stop
+                >
                   <IconoVue nombre="lapiz" :tamano="16" />
                 </button>
-                <button type="button" class="btn-accion btn-accion--eliminar" aria-label="Eliminar usuario">
+                <button 
+                  type="button" 
+                  class="btn-accion btn-accion--eliminar" 
+                  aria-label="Eliminar cliente"
+                  @click.stop
+                >
                   <IconoVue nombre="basura" :tamano="16" />
                 </button>
               </div>
@@ -145,11 +149,11 @@ const registrarNuevoUsuario = (datos: {
     </div>
   </LayoutPanelVue>
 
-  <!-- Modal para registrar nuevo usuario -->
-  <ModalNuevoUsuario
+  <!-- Modal para registrar nuevo cliente -->
+  <ModalNuevoCliente
     :mostrar="mostrarModal"
     @cerrar="mostrarModal = false"
-    @guardar="registrarNuevoUsuario"
+    @guardar="registrarNuevoCliente"
   />
 </template>
 
@@ -173,7 +177,6 @@ const registrarNuevoUsuario = (datos: {
   color: var(--gf-texto);
   font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
 .panel__subtitulo {
@@ -203,6 +206,7 @@ const registrarNuevoUsuario = (datos: {
   gap: 6px;
 }
 
+/* Botones de acción */
 .btn-accion {
   display: inline-flex;
   align-items: center;
@@ -216,11 +220,13 @@ const registrarNuevoUsuario = (datos: {
   transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 
+.btn-accion--seguridad,
 .btn-accion--editar {
   background: var(--gf-borde);
   color: var(--gf-texto-tenue);
 }
 
+.btn-accion--seguridad:hover,
 .btn-accion--editar:hover {
   background: color-mix(in srgb, var(--gf-borde) 80%, var(--gf-texto));
 }
@@ -232,6 +238,15 @@ const registrarNuevoUsuario = (datos: {
 
 .btn-accion--eliminar:hover {
   background: color-mix(in srgb, var(--gf-cancelado-bg) 80%, var(--gf-cancelado-fg));
+}
+
+.fila-clicable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.fila-clicable:hover {
+  background-color: var(--gf-fondo);
 }
 
 @media (max-width: 900px) {

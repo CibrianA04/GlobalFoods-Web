@@ -23,7 +23,7 @@ const tipoSeleccionado = ref<TipoUsuario>('Administrador')
 const nombre = ref('')
 const usuario = ref('')
 const contrasena = ref('')
-const aceptoTerminos = ref(false)
+const confirmacionDatos = ref(false) // Nueva variable para confirmación
 
 // Escuchar cambios en la prop 'usuarioEditar' para precargar los datos o limpiar el formulario
 watch(
@@ -32,7 +32,7 @@ watch(
     if (nuevoUsuario) {
       nombre.value = nuevoUsuario.Nombre || ''
       usuario.value = nuevoUsuario.Usuario || ''
-      contrasena.value = nuevoUsuario.Contraseña || ''
+      contrasena.value = nuevoUsuario.Contrasena || ''
       
       const tipo = nuevoUsuario.TipoUsuario || 'Administrador'
       if (tipo === 'Administrador' || tipo === 'Empleado' || tipo === 'Reporte') {
@@ -40,14 +40,14 @@ watch(
       } else {
         tipoSeleccionado.value = 'Administrador'
       }
-      aceptoTerminos.value = true // Al editar, permitir guardar directo
+      confirmacionDatos.value = false // Desmarcamos por seguridad al abrir
     } else {
       // Limpiar formulario para nuevo registro
       nombre.value = ''
       usuario.value = ''
       contrasena.value = ''
       tipoSeleccionado.value = 'Administrador'
-      aceptoTerminos.value = false
+      confirmacionDatos.value = false
     }
   },
   { immediate: true }
@@ -123,18 +123,19 @@ const handleGuardar = () => {
               id="usuario-contrasena"
               v-model="contrasena"
               etiqueta="Contraseña"
-              tipo="password"
+              tipo="text" 
               icono="candado"
               marcador="********"
             />
 
-            <label class="modal__checkbox-label">
-              <input type="checkbox" v-model="aceptoTerminos" class="modal__checkbox" />
-              <span>Acepto los <a href="#">Términos</a> y <a href="#">Política de Privacidad</a></span>
+            <!-- Nuevo Checkbox de confirmación -->
+            <label class="modal__confirmacion">
+              <input type="checkbox" v-model="confirmacionDatos" class="modal__confirmacion-input" />
+              <span class="modal__confirmacion-texto">Confirmo que los datos ingresados son correctos</span>
             </label>
 
             <div class="modal__boton-wrap">
-              <BotonVue tipo="submit" variante="primario" :deshabilitado="!aceptoTerminos">
+              <BotonVue tipo="submit" variante="primario" :deshabilitado="!confirmacionDatos">
                 {{ usuarioEditar ? 'Guardar Cambios' : 'Registrar' }}
               </BotonVue>
             </div>
@@ -236,23 +237,37 @@ const handleGuardar = () => {
   gap: 16px;
 }
 
-.modal__checkbox-label {
+/* Estilos del nuevo checkbox de confirmación */
+.modal__confirmacion {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--gf-texto-tenue);
-  cursor: pointer;
+  gap: 12px;
   margin-top: 4px;
+  padding: 12px 14px;
+  background-color: var(--gf-fondo);
+  border: 1px solid var(--gf-borde);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.modal__checkbox-label a {
-  color: var(--gf-primario);
-  text-decoration: underline;
+.modal__confirmacion:hover {
+  border-color: var(--gf-primario);
+  background-color: color-mix(in srgb, var(--gf-fondo) 80%, var(--gf-primario));
 }
 
-.modal__checkbox {
+.modal__confirmacion-input {
+  width: 18px;
+  height: 18px;
   accent-color: var(--gf-primario);
+  cursor: pointer;
+}
+
+.modal__confirmacion-texto {
+  font-size: 13.5px;
+  color: var(--gf-texto);
+  font-weight: 500;
+  user-select: none;
 }
 
 .modal__boton-wrap {

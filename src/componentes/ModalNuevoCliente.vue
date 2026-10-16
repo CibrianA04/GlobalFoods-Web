@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import logo from '@/recursos/logo-transparente.png'
 import BotonVue from '@/componentes/BotonVue.vue'
 import CampoTextoVue from '@/componentes/CampoTextoVue.vue'
+import type { ClienteAPI } from '@/modulos/administracion/servicios/servicioClientes'
 
 interface Props {
   mostrar: boolean
+  clienteEditar?: ClienteAPI | null 
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  mostrar: false,
+  clienteEditar: null
+})
 
 const emit = defineEmits<{
   (e: 'cerrar'): void
@@ -19,7 +24,7 @@ const nombre = ref('')
 const celular = ref('')
 const usuario = ref('')
 const contrasena = ref('')
-const aceptoTerminos = ref(false)
+const confirmacionDatos = ref(false) // Cambiamos el nombre de la variable
 
 const handleGuardar = () => {
   emit('guardar', {
@@ -30,6 +35,23 @@ const handleGuardar = () => {
   })
   emit('cerrar')
 }
+
+watch(() => props.clienteEditar, (nuevoCliente) => {
+  if (nuevoCliente) {
+    // Llenamos todos los campos, incluyendo la contraseña
+    nombre.value = nuevoCliente.Nombre || ''
+    celular.value = nuevoCliente.Telefono || ''
+    usuario.value = nuevoCliente.Usuario || ''
+    contrasena.value = nuevoCliente.Contrasena || '' 
+    confirmacionDatos.value = false // Desmarcamos el check por seguridad al abrir
+  } else {
+    nombre.value = ''
+    celular.value = ''
+    usuario.value = ''
+    contrasena.value = ''
+    confirmacionDatos.value = false
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -71,19 +93,20 @@ const handleGuardar = () => {
               id="cliente-contrasena"
               v-model="contrasena"
               etiqueta="Contraseña"
-              tipo="password"
+              tipo="text" 
               icono="candado"
               marcador="********"
             />
 
-            <label class="modal__checkbox-label">
-              <input type="checkbox" v-model="aceptoTerminos" class="modal__checkbox" />
-              <span>Acepto los <a href="#">Términos</a> y <a href="#">Política de Privacidad</a></span>
+            <!-- Nuevo Checkbox de confirmación -->
+            <label class="modal__confirmacion">
+              <input type="checkbox" v-model="confirmacionDatos" class="modal__confirmacion-input" />
+              <span class="modal__confirmacion-texto">Confirmo que los datos ingresados son correctos</span>
             </label>
 
             <div class="modal__boton-wrap">
-              <BotonVue tipo="submit" variante="primario" :deshabilitado="!aceptoTerminos">
-                Registrar
+              <BotonVue tipo="submit" variante="primario" :deshabilitado="!confirmacionDatos">
+                {{ clienteEditar ? 'Guardar Cambios' : 'Registrar' }}
               </BotonVue>
             </div>
           </form>
@@ -143,23 +166,37 @@ const handleGuardar = () => {
   gap: 16px;
 }
 
-.modal__checkbox-label {
+/* Estilos del nuevo checkbox de confirmación */
+.modal__confirmacion {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--gf-texto-tenue);
-  cursor: pointer;
+  gap: 12px;
   margin-top: 4px;
+  padding: 12px 14px;
+  background-color: var(--gf-fondo);
+  border: 1px solid var(--gf-borde);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.modal__checkbox-label a {
-  color: var(--gf-primario);
-  text-decoration: underline;
+.modal__confirmacion:hover {
+  border-color: var(--gf-primario);
+  background-color: color-mix(in srgb, var(--gf-fondo) 80%, var(--gf-primario));
 }
 
-.modal__checkbox {
+.modal__confirmacion-input {
+  width: 18px;
+  height: 18px;
   accent-color: var(--gf-primario);
+  cursor: pointer;
+}
+
+.modal__confirmacion-texto {
+  font-size: 13.5px;
+  color: var(--gf-texto);
+  font-weight: 500;
+  user-select: none;
 }
 
 .modal__boton-wrap {

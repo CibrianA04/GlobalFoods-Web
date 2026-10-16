@@ -1,7 +1,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import type { Cliente } from '@/modulos/ventas/interfaces/cliente'
-import { buscarClientes } from '@/modulos/ventas/servicios/servicioClientes'
+import { buscarClientes } from '@/modulos/ventas/servicios/servicioClientesVentas'
 
 export const MINIMO_CARACTERES_BUSQUEDA = 3
 const ESPERA_ANTES_DE_BUSCAR_MS = 300

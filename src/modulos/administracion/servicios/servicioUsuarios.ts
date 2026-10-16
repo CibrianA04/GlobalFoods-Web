@@ -5,7 +5,7 @@ const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 export interface UsuarioAPI {
   Id: number
   Usuario: string
-  Contraseña?: string
+  Contrasena: string
   Nombre: string
   TipoUsuario: string
   Estatus: number

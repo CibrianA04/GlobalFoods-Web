@@ -7,11 +7,12 @@ import EncabezadoSeccionVue from '@/componentes/EncabezadoSeccionVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
 import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
-import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
-import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 import { obtenerInventarioActual, type ArticuloInventario } from '@/modulos/almacen/servicios/servicioInventario'
 
+
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
+const itemsNavegacion = obtenerMenuNavegacion()
 const inventario = ref<ArticuloInventario[]>([])
 const cargandoInventario = ref(true)
 const errorInventario = ref('')
@@ -60,14 +61,6 @@ const formatoPrecio = new Intl.NumberFormat('es-MX', {
 function mostrarPrecio(precio: number): string {
   return formatoPrecio.format(precio)
 }
-
-const itemsNavegacion: ItemNavegacion[] = [
-  { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
-  { etiqueta: 'Pedidos', icono: 'pedidos' },
-  { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
-  { etiqueta: 'Reportes', icono: 'reportes' },
-  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' }
-]
 
 const columnasInventario: ColumnaTabla[] = [
   { clave: 'talla', etiqueta: 'Talla' },

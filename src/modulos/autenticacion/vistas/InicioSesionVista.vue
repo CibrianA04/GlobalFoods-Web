@@ -32,7 +32,7 @@ const iniciarSesion = async () => {
 
   try {
     const respuestaInicioSesion = await iniciarSesionUsuario(usuarioLimpio, contrasenaLimpia)
-    guardarToken(respuestaInicioSesion.accessToken, respuestaInicioSesion.nombre)
+    guardarToken(respuestaInicioSesion.accessToken, respuestaInicioSesion.nombre, respuestaInicioSesion.tipoUsuario)
     enrutador.push('/panel')
   } catch (errorCapturado) {
     error.value = errorCapturado instanceof Error ? errorCapturado.message : 'No se pudo iniciar sesión.'

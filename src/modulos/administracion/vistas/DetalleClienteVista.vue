@@ -7,18 +7,12 @@ import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
-import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 
 // Navegación lateral
-const itemsNavegacion: ItemNavegacion[] = [
-  { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
-  { etiqueta: 'Pedidos', icono: 'pedidos' },
-  { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
-  { etiqueta: 'Reportes', icono: 'reportes' },
-  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' }
-]
+const itemsNavegacion = obtenerMenuNavegacion()
 
 // Columnas para Sucursales
 const columnasSucursales: ColumnaTabla[] = [

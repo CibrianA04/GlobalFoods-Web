@@ -8,55 +8,44 @@ import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import ModalNuevoUsuario from '@/componentes/ModalNuevoUsuario.vue'
 import ModalConfirmacion from '@/componentes/ModalConfirmacion.vue'
-import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
-import {
-  obtenerUsuarios,
-  crearUsuarioAPI,
-  actualizarUsuarioAPI,
-  eliminarUsuarioAPI,
-  type UsuarioAPI,
-} from '../servicios/servicioUsuarios'
-import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { obtenerUsuarios, crearUsuarioAPI, actualizarUsuarioAPI, eliminarUsuarioAPI, type UsuarioAPI, type DatosFormularioUsuario } from '@/modulos/administracion/servicios/servicioUsuarios'
 
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
+const itemsNavegacion = obtenerMenuNavegacion()
 
-const mostrarModal = ref(false)
-const usuarioSeleccionado = ref<UsuarioAPI | null>(null)
-
-// Estados para el modal de eliminación
-const mostrarModalConfirmacion = ref(false)
-const usuarioAEliminar = ref<UsuarioAPI | null>(null)
-
+// Estados generales
 const usuarios = ref<UsuarioAPI[]>([])
 const cargando = ref(true)
 const errorCarga = ref('')
 
-const contrasenasVisibles = ref<Set<number>>(new Set())
+// Estados de modales
+const mostrarModal = ref(false)
+const usuarioSeleccionado = ref<UsuarioAPI | null>(null)
+const mostrarModalConfirmacion = ref(false)
+const usuarioAEliminar = ref<UsuarioAPI | null>(null)
 
-const toggleMostrarContrasena = (id: number) => {
-  if (contrasenasVisibles.value.has(id)) {
-    contrasenasVisibles.value.delete(id)
-  } else {
-    contrasenasVisibles.value.add(id)
-  }
-}
+// Estado para controlar qué contraseñas están visibles (guardamos el Id)
+const contrasenasVisibles = ref<number[]>([])
 
-const itemsNavegacion: ItemNavegacion[] = [
-  { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
-  { etiqueta: 'Pedidos', icono: 'pedidos' },
-  { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
-  { etiqueta: 'Reportes', icono: 'reportes' },
-  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' },
-]
-
+// Columnas adaptadas para Usuarios (Agregada CONTRASEÑA)
 const columnasUsuarios: ColumnaTabla[] = [
-  { clave: 'tipo', etiqueta: 'TIPO' },
   { clave: 'nombre', etiqueta: 'NOMBRE' },
   { clave: 'usuario', etiqueta: 'USUARIO' },
+  { clave: 'rol', etiqueta: 'ROL' },
   { clave: 'contrasena', etiqueta: 'CONTRASEÑA' },
   { clave: 'estado', etiqueta: 'ESTADO' },
   { clave: 'cambios', etiqueta: 'CAMBIOS', alineacion: 'centro' },
 ]
+
+const alternarContrasena = (id: number) => {
+  const index = contrasenasVisibles.value.indexOf(id)
+  if (index > -1) {
+    contrasenasVisibles.value.splice(index, 1) // Ocultar
+  } else {
+    contrasenasVisibles.value.push(id) // Mostrar
+  }
+}
 
 const cargarDatosUsuarios = async () => {
   cargando.value = true
@@ -79,24 +68,24 @@ const abrirModalCrear = () => {
   mostrarModal.value = true
 }
 
-const abrirModalEditar = (usr: UsuarioAPI) => {
-  usuarioSeleccionado.value = usr
+const abrirModalEditar = (usu: UsuarioAPI) => {
+  usuarioSeleccionado.value = usu
   mostrarModal.value = true
 }
 
-const guardarUsuario = async (datos: {
-  tipoUsuario: string
-  nombre: string
-  usuario: string
-  contrasena: string
-}) => {
+const solicitarEliminarUsuario = (usu: UsuarioAPI) => {
+  usuarioAEliminar.value = usu
+  mostrarModalConfirmacion.value = true
+}
+
+const guardarUsuario = async (datos: { nombre: string; tipoUsuario: string; usuario: string; contrasena: string }) => {
   try {
-    const payload = {
+    const payload: DatosFormularioUsuario = {
       usuario: datos.usuario,
       contrasena: datos.contrasena,
       nombre: datos.nombre,
-      tipoUsuario: datos.tipoUsuario,
-      estatus: 1,
+      tipoUsuario: datos.tipoUsuario, 
+      estatus: 1, 
     }
 
     if (usuarioSeleccionado.value) {
@@ -105,19 +94,13 @@ const guardarUsuario = async (datos: {
       await crearUsuarioAPI(payload)
     }
 
+    mostrarModal.value = false
     await cargarDatosUsuarios()
   } catch (err: any) {
     alert(err.message || 'Error al guardar el usuario')
   }
 }
 
-// Abrir el modal de confirmación pasando el usuario seleccionado
-const solicitarEliminarUsuario = (usr: UsuarioAPI) => {
-  usuarioAEliminar.value = usr
-  mostrarModalConfirmacion.value = true
-}
-
-// Confirmar y eliminar a través de la API
 const confirmarEliminacion = async () => {
   if (!usuarioAEliminar.value) return
 
@@ -140,11 +123,12 @@ const confirmarEliminacion = async () => {
     item-activo="Usuarios"
   >
     <div class="panel">
+      <!-- Encabezado de la pantalla -->
       <div class="panel__bienvenida">
         <div>
-          <h1 class="panel__titulo">USUARIOS</h1>
+          <h1 class="panel__titulo">Usuarios</h1>
           <p class="panel__subtitulo">
-            Monitorea, modifica, elimina y crea las cuentas ingresadas.
+            Monitorea, modifica, elimina y crea cuentas de acceso al sistema.
           </p>
         </div>
 
@@ -156,8 +140,9 @@ const confirmarEliminacion = async () => {
         </div>
       </div>
 
+      <!-- Sección de la tabla de usuarios -->
       <section>
-        <EncabezadoSeccionVue titulo="Usuarios" icono="usuario" />
+        <EncabezadoSeccionVue titulo="Usuarios del Sistema" icono="usuario" />
 
         <div v-if="cargando" class="panel__estado-carga">
           Cargando usuarios...
@@ -168,51 +153,53 @@ const confirmarEliminacion = async () => {
         </div>
 
         <TablaVue v-else :columnas="columnasUsuarios">
-          <tr v-for="usr in usuarios" :key="usr.Id">
-            <td class="panel__texto-fuerte">{{ usr.TipoUsuario || 'Empleado' }}</td>
-            <td class="panel__texto-nombre">{{ usr.Nombre }}</td>
-            <td class="panel__texto-fuerte">{{ usr.Usuario }}</td>
-            <td class="panel__texto-fuerte">
-              <div class="panel__contrasena-celda">
-                <span>
-                  <template v-if="contrasenasVisibles.has(usr.Id)">
-                    {{ usr.Contraseña || (usr as any).Contrasena || 'Sin contraseña' }}
-                  </template>
-                  <template v-else>
-                    ••••••••
-                  </template>
+          <tr 
+            v-for="usuario in usuarios" 
+            :key="usuario.Id"
+          >
+            <td class="panel__texto-nombre">{{ usuario.Nombre }}</td>
+            <td class="panel__texto-fuerte">{{ usuario.Usuario }}</td>
+            <td class="panel__texto-fuerte">{{ usuario.TipoUsuario }}</td>
+            
+            <!-- Columna de Contraseña con el ojito -->
+            <td>
+              <div class="panel__password-wrap">
+                <span class="panel__texto-pass">
+                  {{ contrasenasVisibles.includes(usuario.Id) ? usuario.Contrasena : '••••••••' }}
                 </span>
-                <button
-                  type="button"
-                  class="btn-ojo"
-                  :aria-label="contrasenasVisibles.has(usr.Id) ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                  @click="toggleMostrarContrasena(usr.Id)"
+                <button 
+                  type="button" 
+                  class="btn-ojo" 
+                  @click="alternarContrasena(usuario.Id)"
+                  title="Mostrar/Ocultar contraseña"
                 >
-                  <IconoVue nombre="ojo" :tamano="16" />
+                  <IconoVue :nombre="contrasenasVisibles.includes(usuario.Id) ? 'ojo-cerrado' : 'ojo'" :tamano="16" />
                 </button>
               </div>
             </td>
+
             <td>
               <ChipEstadoVue
-                :estado="usr.Estatus === 1 ? 'entregado' : 'en_preparacion'"
-                :etiqueta="usr.Estatus === 1 ? 'Activo' : 'Inactivo'"
+                :estado="usuario.Estatus === 1 ? 'entregado' : 'en_preparacion'"
+                :etiqueta="usuario.Estatus === 1 ? 'Activo' : 'Inactivo'"
               />
             </td>
             <td class="tabla__celda--centro">
               <div class="panel__acciones-fila">
-                <button
-                  type="button"
-                  class="btn-accion btn-accion--editar"
+                <!-- Se quitó el botón de seguridad (candado) -->
+                <button 
+                  type="button" 
+                  class="btn-accion btn-accion--editar" 
                   aria-label="Editar usuario"
-                  @click="abrirModalEditar(usr)"
+                  @click="abrirModalEditar(usuario)"
                 >
                   <IconoVue nombre="lapiz" :tamano="16" />
                 </button>
-                <button
-                  type="button"
-                  class="btn-accion btn-accion--eliminar"
+                <button 
+                  type="button" 
+                  class="btn-accion btn-accion--eliminar" 
                   aria-label="Eliminar usuario"
-                  @click="solicitarEliminarUsuario(usr)"
+                  @click="solicitarEliminarUsuario(usuario)"
                 >
                   <IconoVue nombre="basura" :tamano="16" />
                 </button>
@@ -224,7 +211,6 @@ const confirmarEliminacion = async () => {
     </div>
   </LayoutPanelVue>
 
-  <!-- Modal para crear / editar usuario -->
   <ModalNuevoUsuario
     :mostrar="mostrarModal"
     :usuario-editar="usuarioSeleccionado"
@@ -232,7 +218,6 @@ const confirmarEliminacion = async () => {
     @guardar="guardarUsuario"
   />
 
-  <!-- Modal para confirmar eliminación -->
   <ModalConfirmacion
     :mostrar="mostrarModalConfirmacion"
     titulo="¿Eliminar usuario?"
@@ -263,7 +248,6 @@ const confirmarEliminacion = async () => {
   color: var(--gf-texto);
   font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
 .panel__subtitulo {
@@ -286,33 +270,45 @@ const confirmarEliminacion = async () => {
   color: var(--gf-texto);
 }
 
-.panel__contrasena-celda {
+.panel__acciones-fila {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Estilos para la contraseña y ojito */
+.panel__password-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.panel__texto-pass {
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--gf-texto);
+  min-width: 70px;
 }
 
 .btn-ojo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
-  border: 0;
-  background: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--gf-texto-tenue);
   cursor: pointer;
-  transition: color 0.15s ease;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .btn-ojo:hover {
-  color: var(--gf-primario);
-}
-
-.panel__acciones-fila {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  color: var(--gf-texto);
+  background: var(--gf-fondo);
 }
 
 .panel__estado-carga,
@@ -365,7 +361,6 @@ const confirmarEliminacion = async () => {
   .panel {
     gap: 28px;
   }
-
   .panel__titulo {
     font-size: 20px;
   }

@@ -1,71 +1,181 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, RouterLink } from 'vue-router'
 import BotonVue from '@/componentes/BotonVue.vue'
 import EncabezadoSeccionVue from '@/componentes/EncabezadoSeccionVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
 import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
 import TablaVue, { type ColumnaTabla } from '@/componentes/TablaVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
-import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
+import ModalNuevaSucursal from '@/componentes/ModalNuevaSucursal.vue'
+import ModalConfirmacion from '@/componentes/ModalConfirmacion.vue'
+// Importamos el modal del cliente
+import ModalNuevoCliente from '@/componentes/ModalNuevoCliente.vue'
 import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { 
+  obtenerClientePorIdAPI,
+  actualizarClienteAPI, // Agregamos la función para actualizar al cliente
+  obtenerSucursalesClienteAPI, 
+  obtenerPedidosClienteAPI,
+  crearSucursalClienteAPI,
+  actualizarSucursalClienteAPI,
+  eliminarSucursalClienteAPI,
+  type ClienteAPI
+} from '@/modulos/administracion/servicios/servicioClientes'
 
+const route = useRoute()
+const clienteId = Number(route.params.id)
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
-
-// Navegación lateral
 const itemsNavegacion = obtenerMenuNavegacion()
 
-// Columnas para Sucursales
+const cliente = ref<ClienteAPI | null>(null)
+const sucursales = ref<any[]>([])
+const pedidos = ref<any[]>([])
+const cargando = ref(true)
+const errorCarga = ref('')
+
+// Estado para el modal de editar cliente
+const mostrarModalCliente = ref(false)
+
+// Estados de modales para Sucursales
+const mostrarModalSucursal = ref(false)
+const sucursalSeleccionada = ref<any | null>(null)
+const mostrarModalConfirmacionSucursal = ref(false)
+const sucursalAEliminar = ref<any | null>(null)
+
+// Columnas
 const columnasSucursales: ColumnaTabla[] = [
   { clave: 'nombre', etiqueta: 'NOMBRE' },
-  { clave: 'direccion', etiqueta: 'Direccion' },
+  { clave: 'direccion', etiqueta: 'DIRECCIÓN' },
+  { clave: 'telefono', etiqueta: 'TELÉFONO' },
+  { clave: 'estado', etiqueta: 'ESTADO' },
+  { clave: 'cambios', etiqueta: 'CAMBIOS', alineacion: 'centro' },
 ]
 
-// Columnas para Historial de Pedidos
 const columnasPedidos: ColumnaTabla[] = [
   { clave: 'id', etiqueta: 'ID PEDIDO' },
-  { clave: 'sucursal', etiqueta: 'Sucursal' },
+  { clave: 'sucursal', etiqueta: 'SUCURSAL' },
+  { clave: 'fecha', etiqueta: 'FECHA' },
   { clave: 'estado', etiqueta: 'ESTADO' },
   { clave: 'total', etiqueta: 'TOTAL', alineacion: 'derecha' },
 ]
 
-// Datos de la sucursales
-const sucursales = [
-  {
-    id: 1,
-    nombre: 'Las Quintas',
-    direccion: 'Blvrd Sinaloa 811-1395, Las Quintas, 80060 Culiacán Rosales, Sin.',
-  },
-  {
-    id: 2,
-    nombre: 'Barrancos',
-    direccion: 'Blvd. P.º de los Ganaderos 4801, Infonavit Barrancos, Barrancos, 80189 Culiacán Rosales, Sin.',
-  },
-]
+const formatoPrecio = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' })
 
-// Datos del historial de pedidos
-const pedidos = [
-  {
-    id: '#12345',
-    sucursal: 'Las Quintas',
-    estado: 'entregado' as const,
-    total: '$560',
-    hace: 'hace 5 min',
-  },
-  {
-    id: '#12346',
-    sucursal: 'Barrancos',
-    estado: 'entregado' as const,
-    total: '$1,450',
-    hace: 'hace 20 min',
-  },
-  {
-    id: '#12347',
-    sucursal: 'Barrancos',
-    estado: 'entregado' as const,
-    total: '$980',
-    hace: 'hace 1 hora',
-  },
-]
+const formatearFechaNumero = (fechaNum: number) => {
+  if (!fechaNum) return 'N/A'
+  const fechaStr = String(fechaNum)
+  if (fechaStr.length !== 8) return fechaStr
+  const año = fechaStr.substring(0, 4)
+  const mes = fechaStr.substring(4, 6)
+  const dia = fechaStr.substring(6, 8)
+  return `${dia}/${mes}/${año}`
+}
+
+const obtenerNombreSucursal = (idSucursal: number) => {
+  const sucursal = sucursales.value.find(s => s.Id === idSucursal)
+  return sucursal ? sucursal.NombreSucursal : `Sucursal #${idSucursal}`
+}
+
+const cargarDatos = async () => {
+  if (!clienteId || isNaN(clienteId)) {
+    errorCarga.value = 'ID de cliente inválido.'
+    cargando.value = false
+    return
+  }
+  cargando.value = true
+  errorCarga.value = ''
+  try {
+    const [datosCliente, datosSucursales, datosPedidos] = await Promise.all([
+      obtenerClientePorIdAPI(clienteId),
+      obtenerSucursalesClienteAPI(clienteId),
+      obtenerPedidosClienteAPI(clienteId)
+    ])
+    cliente.value = datosCliente
+    sucursales.value = datosSucursales
+    pedidos.value = datosPedidos
+  } catch (err: any) {
+    errorCarga.value = err.message || 'Error al cargar los datos del cliente.'
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(() => cargarDatos())
+
+// -------- Lógica de Edición del Cliente --------
+const abrirModalEditarCliente = () => {
+  mostrarModalCliente.value = true
+}
+
+const guardarCliente = async (datos: { nombre: string; celular: string; usuario: string; contrasena: string }) => {
+  try {
+    const payload = {
+      usuario: datos.usuario,
+      contrasena: datos.contrasena,
+      nombre: datos.nombre,
+      telefono: datos.celular,
+      estatus: cliente.value?.Estatus ?? 1
+    }
+    
+    // Usamos "as any" para evitar el error de TypeScript y mandar las minúsculas al backend
+    await actualizarClienteAPI(clienteId, payload as any)
+    mostrarModalCliente.value = false
+    await cargarDatos() 
+  } catch (err: any) {
+    alert(err.message || 'Error al guardar el cliente')
+  }
+}
+
+// -------- Lógica del CRUD de Sucursales --------
+const abrirModalCrearSucursal = () => {
+  sucursalSeleccionada.value = null
+  mostrarModalSucursal.value = true
+}
+
+const abrirModalEditarSucursal = (sucursal: any) => {
+  sucursalSeleccionada.value = sucursal
+  mostrarModalSucursal.value = true
+}
+
+const solicitarEliminarSucursal = (sucursal: any) => {
+  sucursalAEliminar.value = sucursal
+  mostrarModalConfirmacionSucursal.value = true
+}
+
+const guardarSucursal = async (datos: { nombreSucursal: string; direccion: string; telefono: string }) => {
+  try {
+    const payload = {
+      idCliente: clienteId,
+      NombreSucursal: datos.nombreSucursal,
+      Direccion: datos.direccion,
+      Telefono: datos.telefono,
+      Estatus: 1 
+    }
+
+    if (sucursalSeleccionada.value) {
+      await actualizarSucursalClienteAPI(sucursalSeleccionada.value.Id, payload)
+    } else {
+      await crearSucursalClienteAPI(payload)
+    }
+    mostrarModalSucursal.value = false
+    await cargarDatos() 
+  } catch (err: any) {
+    alert(err.message || 'Error al guardar la sucursal')
+  }
+}
+
+const confirmarEliminacionSucursal = async () => {
+  if (!sucursalAEliminar.value) return
+  try {
+    await eliminarSucursalClienteAPI(sucursalAEliminar.value.Id)
+    mostrarModalConfirmacionSucursal.value = false
+    sucursalAEliminar.value = null
+    await cargarDatos()
+  } catch (err: any) {
+    alert(err.message || 'Error al eliminar la sucursal')
+  }
+}
 </script>
 
 <template>
@@ -76,97 +186,135 @@ const pedidos = [
     item-activo="Clientes"
   >
     <div class="panel">
-      <!-- Encabezado con botón de volver -->
+      <!-- Encabezado y volver -->
       <div class="panel__bienvenida">
         <div>
           <div class="panel__encabezado-volver">
             <RouterLink to="/clientes" class="btn-volver" aria-label="Volver a clientes">
               <IconoVue nombre="flecha-izquierda" :tamano="20" />
             </RouterLink>
-            <h1 class="panel__titulo">Cliente</h1>
+            <h1 class="panel__titulo">Detalle del Cliente</h1>
           </div>
-          <p class="panel__subtitulo">
-            Monitorea, modifica, elimina las cuentas de Clientes.
-          </p>
+          <p class="panel__subtitulo">Monitorea el historial de pedidos y sucursales de este cliente.</p>
         </div>
       </div>
 
-      <!-- Tarjeta de información principal del cliente -->
-      <div class="tarjeta-cliente">
-        <div class="tarjeta-cliente__encabezado">
-          <h2 class="tarjeta-cliente__nombre">Restaurante Mar Y Tierra</h2>
-          <div class="tarjeta-cliente__acciones">
-            <button type="button" class="btn-accion btn-accion--editar" aria-label="Editar cliente">
-              <IconoVue nombre="lapiz" :tamano="16" />
-            </button>
-            <button type="button" class="btn-accion btn-accion--eliminar" aria-label="Eliminar cliente">
-              <IconoVue nombre="basura" :tamano="16" />
-            </button>
+      <div v-if="cargando" class="panel__estado-carga">Cargando información del cliente...</div>
+      <div v-else-if="errorCarga" class="panel__estado-error">{{ errorCarga }}</div>
+
+      <template v-else-if="cliente">
+        <!-- Tarjeta del cliente -->
+        <div class="tarjeta-cliente">
+          <div class="tarjeta-cliente__encabezado">
+            <h2 class="tarjeta-cliente__nombre">{{ cliente.Nombre }}</h2>
+            <div class="tarjeta-cliente__acciones">
+              <!-- Se agregó el evento click aquí -->
+              <button 
+                type="button" 
+                class="btn-accion btn-accion--editar" 
+                aria-label="Editar cliente"
+                @click="abrirModalEditarCliente"
+              >
+                <IconoVue nombre="lapiz" :tamano="16" />
+              </button>
+            </div>
+          </div>
+          <div class="tarjeta-cliente__tabla-wrap">
+            <table class="tarjeta-cliente__tabla">
+              <thead><tr><th>USUARIO</th><th>TELÉFONO</th><th>ESTADO</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="panel__texto-fuerte">{{ cliente.Usuario }}</td>
+                  <td class="panel__texto-fuerte">{{ cliente.Telefono || 'N/A' }}</td>
+                  <td><ChipEstadoVue :estado="cliente.Estatus === 1 ? 'entregado' : 'en_preparacion'" :etiqueta="cliente.Estatus === 1 ? 'Activo' : 'Inactivo'" /></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div class="tarjeta-cliente__tabla-wrap">
-          <table class="tarjeta-cliente__tabla">
-            <thead>
-              <tr>
-                <th>USUARIO</th>
-                <th>CELULAR</th>
-                <th>ESTADO</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="panel__texto-fuerte">MYT123</td>
-                <td class="panel__texto-fuerte">6670000000</td>
-                <td>
-                  <ChipEstadoVue estado="entregado" etiqueta="Activo" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <!-- SECCIÓN SUCURSALES -->
+        <section>
+          <EncabezadoSeccionVue titulo="Sucursales" icono="usuario">
+            <BotonVue variante="exito" @click="abrirModalCrearSucursal">
+              <IconoVue nombre="mas" :tamano="16" />
+              Nueva Sucursal
+            </BotonVue>
+          </EncabezadoSeccionVue>
 
-      <!-- Sección de Sucursales -->
-      <section>
-        <EncabezadoSeccionVue titulo="Sucursales" icono="usuario">
-          <BotonVue variante="exito">
-            <IconoVue nombre="mas" :tamano="16" />
-            Nueva Sucursal
-          </BotonVue>
-        </EncabezadoSeccionVue>
+          <TablaVue v-if="sucursales.length > 0" :columnas="columnasSucursales">
+            <tr v-for="suc in sucursales" :key="suc.Id">
+              <td class="panel__texto-nombre">{{ suc.NombreSucursal }}</td>
+              <td>{{ suc.Direccion }}</td>
+              <td class="panel__texto-fuerte">{{ suc.Telefono || 'N/A' }}</td>
+              <td>
+                <ChipEstadoVue 
+                  :estado="suc.Estatus === 1 ? 'entregado' : 'en_preparacion'" 
+                  :etiqueta="suc.Estatus === 1 ? 'Activa' : 'Inactiva'" 
+                />
+              </td>
+              <td class="tabla__celda--centro">
+                <div class="panel__acciones-fila">
+                  <button type="button" class="btn-accion btn-accion--editar" @click="abrirModalEditarSucursal(suc)">
+                    <IconoVue nombre="lapiz" :tamano="16" />
+                  </button>
+                  <button type="button" class="btn-accion btn-accion--eliminar" @click="solicitarEliminarSucursal(suc)">
+                    <IconoVue nombre="basura" :tamano="16" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </TablaVue>
+          <div v-else class="panel__estado-vacio">
+            Este cliente no tiene sucursales registradas.
+          </div>
+        </section>
 
-        <TablaVue :columnas="columnasSucursales">
-          <tr v-for="suc in sucursales" :key="suc.id">
-            <td class="panel__texto-nombre">{{ suc.nombre }}</td>
-            <td class="panel__texto-fuerte">{{ suc.direccion }}</td>
-          </tr>
-        </TablaVue>
-      </section>
-
-      <!-- Sección Historial de Pedidos -->
-      <section>
-        <EncabezadoSeccionVue titulo="Historial de Pedidos" icono="reloj" />
-
-        <TablaVue :columnas="columnasPedidos">
-          <tr v-for="ped in pedidos" :key="ped.id">
-            <td class="panel__id">{{ ped.id }}</td>
-            <td class="panel__texto-nombre">{{ ped.sucursal }}</td>
-            <td>
-              <ChipEstadoVue :estado="ped.estado" />
-            </td>
-            <td class="tabla__celda--derecha">
-              <p class="panel__total">{{ ped.total }}</p>
-              <p class="panel__detalle panel__hace">
-                <IconoVue nombre="reloj" :tamano="12" />
-                {{ ped.hace }}
-              </p>
-            </td>
-          </tr>
-        </TablaVue>
-      </section>
+        <!-- SECCIÓN PEDIDOS -->
+        <section>
+          <EncabezadoSeccionVue titulo="Historial de Pedidos" icono="reloj" />
+          <TablaVue v-if="pedidos.length > 0" :columnas="columnasPedidos">
+            <tr v-for="ped in pedidos" :key="ped.Id">
+              <td class="panel__id">#{{ ped.Id }}</td>
+              <td class="panel__texto-nombre">{{ obtenerNombreSucursal(ped.IdSucursal) }}</td>
+              <td>{{ formatearFechaNumero(ped.Fecha) }}</td>
+              <td><ChipEstadoVue :estado="ped.Estatus === 1 ? 'entregado' : 'pendiente'" :etiqueta="ped.Estatus === 1 ? 'Completado' : 'Pendiente'" /></td>
+              <td class="tabla__celda--derecha">
+                <p class="panel__total">{{ formatoPrecio.format(ped.Total) }}</p>
+                <p class="panel__detalle">{{ ped.TotalKG }} KG</p>
+              </td>
+            </tr>
+          </TablaVue>
+          <div v-else class="panel__estado-vacio">Este cliente no tiene pedidos registrados.</div>
+        </section>
+      </template>
     </div>
   </LayoutPanelVue>
+
+  <!-- Modal Editar Cliente -->
+  <ModalNuevoCliente
+    :mostrar="mostrarModalCliente"
+    :cliente-editar="cliente"
+    @cerrar="mostrarModalCliente = false"
+    @guardar="guardarCliente"
+  />
+
+  <!-- Modales Sucursales -->
+  <ModalNuevaSucursal
+    :mostrar="mostrarModalSucursal"
+    :sucursal-editar="sucursalSeleccionada"
+    @cerrar="mostrarModalSucursal = false"
+    @guardar="guardarSucursal"
+  />
+
+  <ModalConfirmacion
+    :mostrar="mostrarModalConfirmacionSucursal"
+    titulo="¿Eliminar sucursal?"
+    :mensaje="`¿Estás seguro de que deseas eliminar la sucursal '${sucursalAEliminar?.NombreSucursal}'?`"
+    texto-boton-confirmar="Eliminar"
+    @cerrar="mostrarModalConfirmacionSucursal = false"
+    @confirmar="confirmarEliminacionSucursal"
+  />
 </template>
 
 <style scoped>
@@ -209,10 +357,30 @@ const pedidos = [
   font-size: 14px;
 }
 
-/* Tarjeta principal del cliente */
+.panel__estado-carga,
+.panel__estado-error,
+.panel__estado-vacio {
+  padding: 24px;
+  text-align: center;
+  border: 1px solid var(--gf-borde);
+  border-radius: var(--gf-radio, 8px);
+  background: var(--gf-superficie);
+  font-size: 14px;
+}
+
+.panel__estado-error {
+  color: var(--gf-cancelado-fg);
+  border-color: var(--gf-cancelado-punto);
+}
+
+.panel__estado-vacio {
+  color: var(--gf-texto-tenue);
+  border-style: dashed;
+}
+
 .tarjeta-cliente {
   border: 1px solid var(--gf-borde);
-  border-radius: var(--gf-radio);
+  border-radius: var(--gf-radio, 8px);
   background: var(--gf-superficie);
   padding: 20px 24px;
 }
@@ -288,14 +456,13 @@ const pedidos = [
   font-size: 12px;
 }
 
-.panel__hace {
+.panel__acciones-fila {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
 }
 
-/* Botones de acción */
 .btn-accion {
   display: inline-flex;
   align-items: center;
@@ -331,7 +498,6 @@ const pedidos = [
   .panel {
     gap: 28px;
   }
-
   .panel__titulo {
     font-size: 20px;
   }

@@ -2,6 +2,7 @@
 // Paso 1 del pedido: buscar y elegir un cliente registrado.
 // El buscador sigue el patrón combobox con lista: flechas para recorrer, Enter para elegir y
 // Escape para cerrar la lista.
+// Con un cliente elegido, el slot pinta debajo de su tarjeta lo que depende de él (la sucursal).
 
 import { nextTick, reactive, watch } from 'vue'
 
@@ -9,7 +10,7 @@ import BotonVue from '@/componentes/BotonVue.vue'
 import CampoTextoVue from '@/componentes/CampoTextoVue.vue'
 import EncabezadoSeccionVue from '@/componentes/EncabezadoSeccionVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
-import { formatearFecha, inicialesCliente } from '@/modulos/ventas/controladores/formatosPedido'
+import { inicialesCliente } from '@/modulos/ventas/controladores/formatosPedido'
 import { usarBuscadorClientes } from '@/modulos/ventas/controladores/usarBuscadorClientes'
 import { IDS_CAMPOS } from '@/modulos/ventas/controladores/usarNuevoPedido'
 import type { Cliente } from '@/modulos/ventas/interfaces/cliente'
@@ -93,7 +94,7 @@ function alPresionarTecla(evento: KeyboardEvent) {
         :id="IDS_CAMPOS.cliente"
         v-model="buscador.criterio"
         etiqueta="Buscar cliente"
-        marcador="Nombre, razón social o teléfono (mínimo 3 caracteres)"
+        marcador="Nombre del cliente (mínimo 3 caracteres)"
         icono="lupa"
         obligatorio
         compacto
@@ -131,10 +132,7 @@ function alPresionarTecla(evento: KeyboardEvent) {
           @click="seleccionar(resultado)"
         >
           <span class="buscador__nombre">{{ resultado.nombre }}</span>
-          <span class="buscador__detalle">
-            {{ resultado.telefono }}
-            <template v-if="resultado.razonSocial"> · {{ resultado.razonSocial }}</template>
-          </span>
+          <span v-if="resultado.telefono" class="buscador__detalle">{{ resultado.telefono }}</span>
         </li>
       </ul>
     </div>
@@ -148,12 +146,7 @@ function alPresionarTecla(evento: KeyboardEvent) {
           <IconoVue nombre="check" :tamano="16" class="tarjeta-cliente__check" />
           <span class="visualmente-oculto">(cliente seleccionado)</span>
         </p>
-        <p class="tarjeta-cliente__detalle">
-          {{ cliente.telefono }} · {{ cliente.direccion ?? 'Sin dirección registrada' }}
-        </p>
-        <p class="tarjeta-cliente__ultimo">
-          {{ cliente.ultimoPedido ? `Último pedido: ${formatearFecha(cliente.ultimoPedido)}` : 'Sin pedidos previos' }}
-        </p>
+        <p v-if="cliente.telefono" class="tarjeta-cliente__detalle">{{ cliente.telefono }}</p>
       </div>
 
       <div class="tarjeta-cliente__accion">
@@ -169,6 +162,8 @@ function alPresionarTecla(evento: KeyboardEvent) {
         </BotonVue>
       </div>
     </div>
+
+    <slot v-if="cliente" />
 
     <p class="seccion-cliente__nota">
       ¿Cliente nuevo? Solicita su alta en el sistema interno; aquí solo se consultan clientes registrados.
@@ -272,12 +267,6 @@ function alPresionarTecla(evento: KeyboardEvent) {
   margin-top: 2px;
   color: var(--gf-texto-tenue);
   font-size: 13px;
-}
-
-.tarjeta-cliente__ultimo {
-  margin-top: 2px;
-  color: var(--gf-texto-tenue);
-  font-size: 12px;
 }
 
 .tarjeta-cliente__accion {

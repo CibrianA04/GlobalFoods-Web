@@ -5,7 +5,7 @@ import {
   type ArticuloInventario,
 } from '@/modulos/almacen/servicios/servicioInventario'
 import { fechaHoyIso, formatearNumero } from '@/modulos/ventas/controladores/formatosPedido'
-import type { Cliente } from '@/modulos/ventas/interfaces/cliente'
+import type { Cliente, SucursalCliente } from '@/modulos/ventas/interfaces/cliente'
 import type {
   DatosRegistroPedido,
   ModalidadEntrega,
@@ -14,6 +14,7 @@ import type {
   RenglonResumen,
   ResumenPedido,
 } from '@/modulos/ventas/interfaces/pedido'
+import { obtenerSucursalesActivas } from '@/modulos/ventas/servicios/servicioClientesVentas'
 import { registrarPedido } from '@/modulos/ventas/servicios/servicioPedidos'
 
 // TODO: el inventario no trae la presentación del producto; por ahora todo se vende sin cabeza y por kg.
@@ -23,6 +24,8 @@ export const MAXIMO_OBSERVACIONES = 250
 
 export const MENSAJES = {
   clienteRequerido: 'Seleccione un cliente.',
+  sucursalRequerida: 'Seleccione una sucursal.',
+  sinSucursales: 'Este cliente no tiene sucursales registradas.',
   productosRequeridos: 'Agregue al menos un producto al pedido.',
   cantidadInvalida: 'La cantidad debe ser mayor que cero.',
   modalidadRequerida: 'Seleccione la modalidad de entrega.',
@@ -32,6 +35,7 @@ export const MENSAJES = {
   referenciasRequeridas: 'Capture las referencias de la entrega.',
   inventarioNoDisponible: 'No es posible confirmar la disponibilidad en este momento.',
   errorBusquedaClientes: 'No fue posible consultar los clientes. Intente nuevamente.',
+  errorSucursales: 'No fue posible consultar las sucursales. Intente nuevamente.',
   errorRegistro: 'No fue posible registrar el pedido. Intente nuevamente.',
 }
 
@@ -42,6 +46,9 @@ export function mensajeExcedeDisponible(producto: ProductoVenta): string {
 /** Ids de los campos: enlazan etiquetas y mensajes, y sirven para llevar el foco al primer error. */
 export const IDS_CAMPOS = {
   cliente: 'pedido-cliente',
+  sucursal: 'pedido-sucursal',
+  /** Mensaje de la sucursal; recibe el foco cuando no hay lista para elegir. */
+  errorSucursal: 'pedido-sucursal-error',
   agregarProducto: 'pedido-agregar-producto',
   errorProductos: 'pedido-productos-error',
   modalidad: 'pedido-modalidad-domicilio',
@@ -100,17 +107,26 @@ function cantidadValida(renglon: RenglonPedido): number | null {
 }
 
 /**
- * Estado y reglas del formulario de Nuevo pedido: inventario, cliente, renglones, entrega,
- * validaciones, totales y registro. La vista solo lo pinta y reacciona a sus resultados.
+ * Estado y reglas del formulario de Nuevo pedido: inventario, cliente y sucursal, renglones,
+ * entrega, validaciones, totales y registro. La vista solo lo pinta y reacciona a sus resultados.
+ * Si falla la consulta de sucursales, llama a `alFallarSucursales` para que la vista muestre el aviso.
  */
-export function usarNuevoPedido() {
+export function usarNuevoPedido(opciones: { alFallarSucursales: () => void }) {
   // Inventario (productos que se pueden agregar)
   const productosInventario = ref<ProductoVenta[]>([])
   const cargandoInventario = ref(true)
   const errorInventario = ref(false)
 
+  // Sucursales activas del cliente elegido
+  const sucursales = ref<SucursalCliente[]>([])
+  const cargandoSucursales = ref(false)
+  const errorSucursales = ref(false)
+  // Cada consulta lleva un número; si llega la respuesta de una vieja (otro cliente), se descarta.
+  let consultaSucursales = 0
+
   // Formulario
   const cliente = ref<Cliente | null>(null)
+  const sucursal = ref<SucursalCliente | null>(null)
   const renglones = ref<RenglonPedido[]>([])
   const modalidad = ref<ModalidadEntrega | null>(null)
   const fechaEntrega = ref('')
@@ -136,11 +152,39 @@ export function usarNuevoPedido() {
     }
   }
 
-  // Al elegir un cliente con dirección registrada, se propone esa dirección.
-  watch(cliente, (nuevo) => {
-    if (nuevo?.direccion) {
+  /** Carga las sucursales activas del cliente elegido. Si tiene una sola, queda seleccionada. */
+  async function cargarSucursales() {
+    const clienteActual = cliente.value
+    consultaSucursales += 1
+    const numero = consultaSucursales
+    sucursal.value = null
+    sucursales.value = []
+    errorSucursales.value = false
+    cargandoSucursales.value = clienteActual !== null
+    if (!clienteActual) return
+
+    try {
+      const activas = await obtenerSucursalesActivas(clienteActual.id)
+      if (numero !== consultaSucursales) return
+      sucursales.value = activas
+      if (activas.length === 1) sucursal.value = activas[0] ?? null
+    } catch {
+      if (numero !== consultaSucursales) return
+      errorSucursales.value = true
+      opciones.alFallarSucursales()
+    } finally {
+      if (numero === consultaSucursales) cargandoSucursales.value = false
+    }
+  }
+
+  // Al cambiar de cliente se cargan sus sucursales (o se limpian si se quitó el cliente).
+  watch(cliente, cargarSucursales)
+
+  // Al elegir una sucursal con dirección registrada, se propone esa dirección.
+  watch(sucursal, (nueva) => {
+    if (nueva?.direccion) {
       usarDireccionRegistrada.value = true
-      direccionEntrega.value = nuevo.direccion
+      direccionEntrega.value = nueva.direccion
     } else if (usarDireccionRegistrada.value) {
       usarDireccionRegistrada.value = false
       direccionEntrega.value = ''
@@ -148,7 +192,7 @@ export function usarNuevoPedido() {
   })
 
   watch(usarDireccionRegistrada, (usar) => {
-    if (usar && cliente.value?.direccion) direccionEntrega.value = cliente.value.direccion
+    if (usar && sucursal.value?.direccion) direccionEntrega.value = sucursal.value.direccion
   })
 
   // Renglones
@@ -194,8 +238,17 @@ export function usarNuevoPedido() {
     if (!fechaEntrega.value) fecha = MENSAJES.fechaRequerida
     else if (fechaEntrega.value < fechaHoyIso()) fecha = MENSAJES.fechaPasada
 
+    // Sin cliente, el error que cuenta es el del cliente.
+    let mensajeSucursal = ''
+    if (cliente.value && !sucursal.value) {
+      // Si la consulta ya respondió sin sucursales activas, no hay cuál elegir.
+      const sinSucursales = !cargandoSucursales.value && !errorSucursales.value && sucursales.value.length === 0
+      mensajeSucursal = sinSucursales ? MENSAJES.sinSucursales : MENSAJES.sucursalRequerida
+    }
+
     return {
       cliente: cliente.value ? '' : MENSAJES.clienteRequerido,
+      sucursal: mensajeSucursal,
       productos: renglones.value.length > 0 ? '' : MENSAJES.productosRequeridos,
       modalidad: modalidad.value ? '' : MENSAJES.modalidadRequerida,
       fecha,
@@ -207,6 +260,7 @@ export function usarNuevoPedido() {
   type ErroresPedido = ReturnType<typeof calcularErrores>
   const SIN_ERRORES: ErroresPedido = {
     cliente: '',
+    sucursal: '',
     productos: '',
     modalidad: '',
     fecha: '',
@@ -240,6 +294,10 @@ export function usarNuevoPedido() {
     const encontrados = calcularErrores()
 
     if (encontrados.cliente) return IDS_CAMPOS.cliente
+    if (encontrados.sucursal) {
+      // La lista para elegir solo aparece cuando hay varias sucursales; si no, el foco va al mensaje.
+      return sucursales.value.length > 1 ? IDS_CAMPOS.sucursal : IDS_CAMPOS.errorSucursal
+    }
     if (encontrados.productos) {
       // Si "Agregar producto" está deshabilitado no puede recibir el foco; va al mensaje.
       const agregarDeshabilitado = cargandoInventario.value || errorInventario.value
@@ -279,6 +337,7 @@ export function usarNuevoPedido() {
 
   const resumen = computed<ResumenPedido>(() => ({
     cliente: cliente.value?.nombre ?? null,
+    sucursal: sucursal.value?.nombre ?? null,
     modalidad: modalidad.value,
     fechaEntrega: fechaEntrega.value,
     direccionEntrega: direccionEntrega.value.trim(),
@@ -302,10 +361,15 @@ export function usarNuevoPedido() {
 
   // Registro
 
-  function datosParaRegistrar(clienteActual: Cliente, modalidadActual: ModalidadEntrega): DatosRegistroPedido {
+  function datosParaRegistrar(
+    clienteActual: Cliente,
+    sucursalActual: SucursalCliente,
+    modalidadActual: ModalidadEntrega,
+  ): DatosRegistroPedido {
     const domicilio = modalidadActual === 'domicilio'
     return {
       clienteId: clienteActual.id,
+      idSucursal: sucursalActual.id,
       modalidad: modalidadActual,
       fechaEntrega: fechaEntrega.value,
       direccionEntrega: domicilio ? direccionEntrega.value.trim() : null,
@@ -327,14 +391,15 @@ export function usarNuevoPedido() {
     if (enviando.value) return null
 
     const clienteActual = cliente.value
+    const sucursalActual = sucursal.value
     const modalidadActual = modalidad.value
-    if (validar() !== null || !clienteActual || !modalidadActual) {
+    if (validar() !== null || !clienteActual || !sucursalActual || !modalidadActual) {
       throw new Error('El pedido tiene datos incompletos.')
     }
 
     enviando.value = true
     try {
-      const { folio } = await registrarPedido(datosParaRegistrar(clienteActual, modalidadActual))
+      const { folio } = await registrarPedido(datosParaRegistrar(clienteActual, sucursalActual, modalidadActual))
       return folio
     } finally {
       enviando.value = false
@@ -342,6 +407,7 @@ export function usarNuevoPedido() {
   }
 
   function reiniciar() {
+    // Al quitar el cliente, el watch de cliente limpia también la sucursal y sus sucursales.
     cliente.value = null
     renglones.value = []
     modalidad.value = null
@@ -358,6 +424,10 @@ export function usarNuevoPedido() {
     cargandoInventario,
     errorInventario,
     cliente,
+    sucursal,
+    sucursales,
+    cargandoSucursales,
+    errorSucursales,
     renglones,
     modalidad,
     fechaEntrega,
@@ -371,6 +441,7 @@ export function usarNuevoPedido() {
     resumen,
     hayDatosCapturados,
     cargarInventario,
+    cargarSucursales,
     agregarProducto,
     quitarRenglon,
     cambiarCantidad,

@@ -75,6 +75,10 @@ watch(
           <dt><IconoVue nombre="clientes" :tamano="16" /> Cliente</dt>
           <dd>{{ resumen.cliente }}</dd>
         </div>
+        <div class="confirmacion__dato">
+          <dt><IconoVue nombre="inicio" :tamano="16" /> Sucursal</dt>
+          <dd>{{ resumen.sucursal }}</dd>
+        </div>
         <div v-if="modalidad" class="confirmacion__dato">
           <dt><IconoVue :nombre="modalidad.icono" :tamano="16" /> Modalidad</dt>
           <dd>{{ modalidad.titulo }}</dd>

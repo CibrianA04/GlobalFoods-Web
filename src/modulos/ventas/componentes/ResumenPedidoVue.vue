@@ -52,6 +52,10 @@ const SIN_DATO = '—'
         <dd>{{ resumen.cliente ?? SIN_DATO }}</dd>
       </div>
       <div class="resumen__dato">
+        <dt>Sucursal</dt>
+        <dd>{{ resumen.sucursal ?? SIN_DATO }}</dd>
+      </div>
+      <div class="resumen__dato">
         <dt>Modalidad</dt>
         <dd>{{ resumen.modalidad ? MODALIDADES[resumen.modalidad].titulo : SIN_DATO }}</dd>
       </div>

@@ -40,6 +40,8 @@ export interface ProductoRegistroPedido {
 /** Cuerpo de POST /api/pedidos. */
 export interface DatosRegistroPedido {
   clienteId: number
+  /** Sucursal del cliente a la que va el pedido. */
+  idSucursal: number
   modalidad: ModalidadEntrega
   /** aaaa-mm-dd */
   fechaEntrega: string
@@ -70,6 +72,8 @@ export interface RenglonResumen {
 /** Datos del pedido listos para mostrar (resumen lateral y modal de confirmación). */
 export interface ResumenPedido {
   cliente: string | null
+  /** Nombre de la sucursal elegida. */
+  sucursal: string | null
   modalidad: ModalidadEntrega | null
   /** aaaa-mm-dd, o vacío si no se ha capturado. */
   fechaEntrega: string

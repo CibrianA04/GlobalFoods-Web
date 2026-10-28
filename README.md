@@ -102,7 +102,7 @@ GlobalFoods-Web/
 │  │     ├─ componentes/    # secciones y modales de Nuevo pedido
 │  │     ├─ controladores/  # usarNuevoPedido, usarBuscadorClientes, formatosPedido
 │  │     ├─ interfaces/     # cliente.ts, pedido.ts
-│  │     ├─ servicios/      # servicioClientes.ts, servicioPedidos.ts (simulados)
+│  │     ├─ servicios/      # servicioClientesVentas.ts (clientes y sucursales), servicioPedidos.ts (simulado)
 │  │     └─ vistas/NuevoPedidoVista.vue
 │  └─ pruebas/
 ```
@@ -143,7 +143,7 @@ El enrutador está configurado con estas rutas principales:
 
 La interfaz de inicio de sesión consulta `POST /api/auth/login`, conserva el token de acceso y dirige al panel. El panel y Nuevo pedido leen el inventario real de `GET /api/inventario/actual`. Las vistas de usuarios y clientes siguen usando datos de demostración.
 
-La pantalla **Nuevo pedido** (`/pedidos/nuevo`, módulo de ventas) captura cliente, productos y entrega, pide confirmación y registra el pedido. La búsqueda de clientes y el registro todavía son simulados en `src/modulos/ventas/servicios/`, porque la API aún no tiene `GET /api/clientes` ni `POST /api/pedidos`. Cada servicio documenta el endpoint propuesto; al conectarlo solo cambia el cuerpo de la función.
+La pantalla **Nuevo pedido** (`/pedidos/nuevo`, módulo de ventas) captura cliente y sucursal, productos y entrega, pide confirmación y registra el pedido. La búsqueda de clientes usa `GET /api/clientes/activos` y las sucursales del cliente elegido salen de `GET /api/sucursales-clientes?idCliente={id}`. El registro todavía es simulado en `src/modulos/ventas/servicios/servicioPedidos.ts`, que documenta el endpoint `POST /api/pedidos`; al conectarlo solo cambia el cuerpo de la función.
 
 ## Documentación complementaria
 

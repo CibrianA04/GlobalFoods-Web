@@ -1,123 +1,165 @@
 import { obtenerToken } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
-import type { Cliente } from '@/modulos/ventas/interfaces/cliente'
+import type { Cliente, SucursalCliente } from '@/modulos/ventas/interfaces/cliente'
 
-// SIMULADO: la API todavía no tiene endpoint de clientes. Al conectarla, solo cambia el
-// cuerpo de buscarClientes(); la firma y el tipo Cliente se quedan igual.
+const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-/** Pon en true para simular que la consulta falla y probar el aviso de error. */
-const FORZAR_ERROR_BUSQUEDA = false
-
-const RETARDO_SIMULADO_MS = 300
 const MAXIMO_RESULTADOS = 50
+const ESTATUS_ACTIVO = 1
 
-const clientesSimulados: Cliente[] = [
-  {
-    id: 1,
-    nombre: 'Restaurante Mar y Tierra',
-    razonSocial: 'Mar y Tierra Alimentos, S.A. de C.V.',
-    telefono: '667 123 4567',
-    direccion: 'Blvd. Francisco I. Madero 1234, Col. Centro, Culiacán',
-    ultimoPedido: '2026-08-22',
-  },
-  {
-    id: 2,
-    nombre: 'Mariscos El Faro',
-    razonSocial: 'Pescados y Mariscos El Faro, S. de R.L. de C.V.',
-    telefono: '667 234 5678',
-    direccion: 'Av. Álvaro Obregón 845, Col. Almada, Culiacán',
-    ultimoPedido: '2026-09-15',
-  },
-  {
-    id: 3,
-    nombre: 'Cocina Económica Doña Lupita',
-    razonSocial: null,
-    telefono: '667 345 6789',
-    direccion: 'Calle Rosales 210, Col. Centro, Culiacán',
-    ultimoPedido: null,
-  },
-  {
-    id: 4,
-    nombre: 'Victoria Ontiveros',
-    razonSocial: null,
-    telefono: '667 456 7890',
-    direccion: null,
-    ultimoPedido: '2026-09-27',
-  },
-  {
-    id: 5,
-    nombre: 'Mariscos Los Arcos',
-    razonSocial: 'Operadora Los Arcos, S.A. de C.V.',
-    telefono: '667 567 8901',
-    direccion: 'Blvd. Pedro Infante 2400, Desarrollo Urbano Tres Ríos, Culiacán',
-    ultimoPedido: '2026-09-02',
-  },
-  {
-    id: 6,
-    nombre: 'Hotel Plaza Culiacán',
-    razonSocial: 'Hotelera del Pacífico, S.A. de C.V.',
-    telefono: '667 678 9012',
-    direccion: 'Av. Insurgentes 900, Col. Centro Sinaloa, Culiacán',
-    ultimoPedido: '2026-07-30',
-  },
-  {
-    id: 7,
-    nombre: 'Pescadería La Perla',
-    razonSocial: null,
-    telefono: '667 789 0123',
-    direccion: 'Mercado Garmendia, local 14, Col. Centro, Culiacán',
-    ultimoPedido: '2026-09-10',
-  },
-  {
-    id: 8,
-    nombre: 'Taquería El Güero',
-    razonSocial: null,
-    telefono: '667 890 1234',
-    direccion: 'Calle Juan Carrasco 512, Col. Jorge Almada, Culiacán',
-    ultimoPedido: '2026-06-18',
-  },
-]
+/** Cliente tal como llega de GET /api/clientes/activos. */
+interface ClienteActivoAPI {
+  Id: number
+  Nombre: string
+  /** Todavía no lo manda la API; se pidió al backend que lo agregue. */
+  Telefono?: string | null
+}
+
+/** Sucursal tal como llega de GET /api/sucursales-clientes?idCliente={id}. */
+interface SucursalClienteAPI {
+  Id: number
+  IdCliente: number
+  NombreSucursal: string
+  Direccion: string | null
+  Telefono: string | null
+  Estatus: number
+}
+
+/**
+ * Pide una lista a la API con el token de la sesión. Lanza error si no hay sesión, si no hay
+ * conexión, si la API responde con error o si la respuesta no es una lista.
+ * `descripcion` completa los mensajes: "los clientes", "las sucursales".
+ */
+async function consultarLista<T>(ruta: string, descripcion: string): Promise<T[]> {
+  const token = obtenerToken()
+  if (!token) {
+    throw new Error('La sesión no está activa. Inicia sesión nuevamente.')
+  }
+
+  let respuestaHttp: Response
+  try {
+    respuestaHttp = await fetch(`${URL_API.replace(/\/$/, '')}${ruta}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new Error(`No se pudo conectar con el servidor para consultar ${descripcion}.`)
+  }
+
+  const datosRespuesta = (await respuestaHttp.json().catch(() => null)) as T[] | { error?: string } | null
+
+  if (!respuestaHttp.ok) {
+    const mensaje = datosRespuesta && !Array.isArray(datosRespuesta) ? datosRespuesta.error : undefined
+    throw new Error(mensaje || `No se pudo consultar ${descripcion}.`)
+  }
+
+  if (!Array.isArray(datosRespuesta)) {
+    throw new Error(`La respuesta de la API no trae ${descripcion} en una lista válida.`)
+  }
+
+  return datosRespuesta
+}
+
+/** Texto recortado; null si viene vacío o no viene. */
+const textoOpcional = (texto: string | null | undefined) => texto?.trim() || null
+
+function aCliente(cliente: ClienteActivoAPI): Cliente {
+  return {
+    id: cliente.Id,
+    nombre: cliente.Nombre.trim(),
+    telefono: textoOpcional(cliente.Telefono),
+  }
+}
+
+function aSucursal(sucursal: SucursalClienteAPI): SucursalCliente {
+  return {
+    id: sucursal.Id,
+    nombre: sucursal.NombreSucursal.trim(),
+    direccion: textoOpcional(sucursal.Direccion),
+    telefono: textoOpcional(sucursal.Telefono),
+  }
+}
 
 /** Minúsculas y sin acentos, para comparar sin importar cómo se escribió. */
 function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
 }
 
-const esperar = (milisegundos: number) => new Promise((resolver) => setTimeout(resolver, milisegundos))
+/** Solo los dígitos, para comparar teléfonos sin importar espacios, guiones o paréntesis. */
+const soloDigitos = (texto: string) => texto.replace(/\D/g, '')
+
+// Clientes activos en memoria mientras Nuevo pedido está abierta: la primera búsqueda los pide
+// a la API y las siguientes filtran aquí. Se guarda la promesa para que dos búsquedas seguidas
+// compartan la misma consulta. La vista la descarta al cerrarse.
+let clientesEnMemoria: Promise<Cliente[]> | null = null
+
+function obtenerClientesActivos(): Promise<Cliente[]> {
+  if (!clientesEnMemoria) {
+    const consulta = consultarLista<ClienteActivoAPI>('/api/clientes/activos', 'los clientes').then((lista) =>
+      lista.map(aCliente),
+    )
+    // Si falla, se olvida para que el siguiente intento vuelva a consultar la API.
+    consulta.catch(() => {
+      if (clientesEnMemoria === consulta) clientesEnMemoria = null
+    })
+    clientesEnMemoria = consulta
+  }
+  return clientesEnMemoria
+}
+
+/** Descarta los clientes en memoria; la siguiente búsqueda los vuelve a pedir a la API. */
+export function descartarClientesEnMemoria() {
+  clientesEnMemoria = null
+}
 
 /**
- * Busca clientes registrados por nombre, razón social o teléfono (ignora espacios del teléfono).
+ * Busca clientes activos por nombre o teléfono, sin importar acentos ni mayúsculas.
  * Devuelve como máximo 50, ordenados por nombre.
  *
- * Endpoint propuesto (TODAVÍA NO EXISTE en la API):
- *   GET /api/clientes?busqueda={criterio}
+ *   GET /api/clientes/activos
  *   Authorization: Bearer <token>
- *   200 → Cliente[] (el filtro, el orden y el límite de 50 los aplica la API)
+ *   200 → [{ Id, Nombre }] (todos los activos; el filtro, el orden y el límite se aplican aquí)
  *   4xx/5xx → { error: string }
- * Al conectarlo, seguir el mismo manejo que obtenerInventarioActual() en servicioInventario.ts.
+ *
+ * No usar GET /api/clientes: regresa las contraseñas de los clientes.
  */
 export async function buscarClientes(criterio: string): Promise<Cliente[]> {
-  const token = obtenerToken()
-  if (!token) {
-    throw new Error('La sesión no está activa. Inicia sesión nuevamente.')
-  }
-
-  await esperar(RETARDO_SIMULADO_MS)
-
-  if (FORZAR_ERROR_BUSQUEDA) {
-    throw new Error('No se pudo consultar los clientes.')
-  }
+  const clientes = await obtenerClientesActivos()
 
   const texto = normalizar(criterio)
-  const telefono = criterio.replace(/\s+/g, '')
+  // Solo se compara con el teléfono si lo capturado parece un número.
+  const digitos = /^[\d\s()+-]+$/.test(criterio.trim()) ? soloDigitos(criterio) : ''
 
-  return clientesSimulados
+  return clientes
     .filter(
       (cliente) =>
         normalizar(cliente.nombre).includes(texto) ||
-        (cliente.razonSocial !== null && normalizar(cliente.razonSocial).includes(texto)) ||
-        (telefono !== '' && cliente.telefono.replace(/\s+/g, '').includes(telefono)),
+        (digitos !== '' && cliente.telefono !== null && soloDigitos(cliente.telefono).includes(digitos)),
     )
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
     .slice(0, MAXIMO_RESULTADOS)
     .map((cliente) => ({ ...cliente }))
+}
+
+/**
+ * Sucursales activas (Estatus 1) de un cliente, ordenadas por nombre.
+ *
+ *   GET /api/sucursales-clientes?idCliente={id}
+ *   Authorization: Bearer <token>
+ *   200 → [{ Id, IdCliente, NombreSucursal, Direccion, Telefono, Estatus }]
+ *
+ * Si la consulta falla lanza error (no devuelve una lista vacía), para no confundir un fallo
+ * con un cliente sin sucursales.
+ */
+export async function obtenerSucursalesActivas(idCliente: number): Promise<SucursalCliente[]> {
+  const sucursales = await consultarLista<SucursalClienteAPI>(
+    `/api/sucursales-clientes?idCliente=${encodeURIComponent(idCliente)}`,
+    'las sucursales',
+  )
+
+  return (
+    sucursales
+      // Se revisa también el cliente por si la API llegara a ignorar el filtro.
+      .filter((sucursal) => sucursal.Estatus === ESTATUS_ACTIVO && sucursal.IdCliente === idCliente)
+      .map(aSucursal)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  )
 }

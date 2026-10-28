@@ -1,15 +1,14 @@
 <script setup lang="ts">
-// Pantalla Nuevo pedido: captura cliente, productos y entrega, confirma y registra.
+// Pantalla Nuevo pedido: captura cliente y sucursal, productos y entrega, confirma y registra.
 // El estado y las reglas viven en usarNuevoPedido(); aquí solo se conectan las secciones,
 // los modales y la navegación.
 
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import AvisoVue from '@/componentes/AvisoVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
 import LayoutPanelVue from '@/componentes/LayoutPanelVue.vue'
-import type { ItemNavegacion } from '@/componentes/BarraLateralVue.vue'
 import ModalAgregarProductoVue from '@/modulos/ventas/componentes/ModalAgregarProductoVue.vue'
 import ModalConfirmarPedidoVue from '@/modulos/ventas/componentes/ModalConfirmarPedidoVue.vue'
 import ModalDescartarPedidoVue from '@/modulos/ventas/componentes/ModalDescartarPedidoVue.vue'
@@ -17,22 +16,16 @@ import ResumenPedidoVue from '@/modulos/ventas/componentes/ResumenPedidoVue.vue'
 import SeccionClienteVue from '@/modulos/ventas/componentes/SeccionClienteVue.vue'
 import SeccionEntregaVue from '@/modulos/ventas/componentes/SeccionEntregaVue.vue'
 import SeccionProductosVue from '@/modulos/ventas/componentes/SeccionProductosVue.vue'
+import SelectorSucursalVue from '@/modulos/ventas/componentes/SelectorSucursalVue.vue'
 import { MENSAJES, usarNuevoPedido } from '@/modulos/ventas/controladores/usarNuevoPedido'
-import { obtenerNombreUsuario } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { descartarClientesEnMemoria } from '@/modulos/ventas/servicios/servicioClientesVentas'
+import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
-
-// Elementos del menú lateral
-const itemsNavegacion: ItemNavegacion[] = [
-  { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
-  { etiqueta: 'Pedidos', icono: 'pedidos' },
-  { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
-  { etiqueta: 'Reportes', icono: 'reportes' },
-  { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' }
-]
+const itemsNavegacion = obtenerMenuNavegacion()
 
 const enrutador = useRouter()
-const pedido = reactive(usarNuevoPedido())
+const pedido = reactive(usarNuevoPedido({ alFallarSucursales: () => avisar(MENSAJES.errorSucursales) }))
 
 // Cambia al limpiar el formulario para que el buscador de clientes empiece de cero.
 const versionFormulario = ref(0)
@@ -50,6 +43,9 @@ let destinoPendiente: string | null = null
 let salidaConfirmada = false
 
 onMounted(pedido.cargarInventario)
+
+// La lista de clientes se guarda en memoria solo mientras esta pantalla está abierta.
+onUnmounted(descartarClientesEnMemoria)
 
 async function avisar(texto: string) {
   // Se vacía primero para que un mensaje repetido se vuelva a mostrar y a anunciar.
@@ -157,11 +153,6 @@ onBeforeRouteLeave((destino) => {
         <h1 id="nuevo-pedido-titulo" class="nuevo-pedido__titulo">Nuevo pedido</h1>
       </div>
 
-      <p class="nuevo-pedido__subtitulo">
-        Captura el cliente, los productos y los datos de entrega. Al registrarlo, el pedido recibe un folio,
-        queda en estado Pendiente y aparece en la lista de almacén.
-      </p>
-
       <div class="nuevo-pedido__rejilla">
         <form
           class="nuevo-pedido__formulario"
@@ -175,7 +166,16 @@ onBeforeRouteLeave((destino) => {
             class="nuevo-pedido__tarjeta"
             :error="pedido.errores.cliente"
             @error-busqueda="avisar(MENSAJES.errorBusquedaClientes)"
-          />
+          >
+            <SelectorSucursalVue
+              v-model="pedido.sucursal"
+              :sucursales="pedido.sucursales"
+              :cargando="pedido.cargandoSucursales"
+              :error-consulta="pedido.errorSucursales"
+              :error="pedido.errores.sucursal"
+              @reintentar="pedido.cargarSucursales"
+            />
+          </SeccionClienteVue>
 
           <SeccionProductosVue
             class="nuevo-pedido__tarjeta"
@@ -200,7 +200,7 @@ onBeforeRouteLeave((destino) => {
             v-model:referencias="pedido.referencias"
             v-model:observaciones="pedido.observaciones"
             class="nuevo-pedido__tarjeta"
-            :direccion-cliente="pedido.cliente?.direccion ?? null"
+            :direccion-sucursal="pedido.sucursal?.direccion ?? null"
             :errores="pedido.errores"
           />
         </form>

@@ -9,8 +9,8 @@ import { IDS_CAMPOS, MAXIMO_OBSERVACIONES } from '@/modulos/ventas/controladores
 import type { ModalidadEntrega } from '@/modulos/ventas/interfaces/pedido'
 
 interface Props {
-  /** Dirección registrada del cliente elegido; habilita la casilla "Usar la dirección registrada". */
-  direccionCliente: string | null
+  /** Dirección registrada de la sucursal elegida; habilita la casilla "Usar la dirección registrada". */
+  direccionSucursal: string | null
   errores: {
     modalidad: string
     fecha: string
@@ -115,14 +115,14 @@ const hoy = fechaHoyIso()
     </div>
 
     <template v-if="modalidad === 'domicilio'">
-      <label class="entrega__casilla" :class="{ 'entrega__casilla--deshabilitada': !direccionCliente }">
+      <label class="entrega__casilla" :class="{ 'entrega__casilla--deshabilitada': !direccionSucursal }">
         <input
           v-model="usarDireccionRegistrada"
           type="checkbox"
-          :disabled="!direccionCliente"
+          :disabled="!direccionSucursal"
           :aria-controls="IDS_CAMPOS.direccion"
         />
-        Usar la dirección registrada del cliente
+        Usar la dirección registrada de la sucursal
       </label>
 
       <!-- CampoTextoVue pasa class al <input>; el margen va en un contenedor. -->

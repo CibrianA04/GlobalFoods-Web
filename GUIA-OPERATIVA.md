@@ -110,19 +110,20 @@ Se encarga del módulo de administración y usuarios.
 
 ### Ventas
 
-Contiene la pantalla **Nuevo pedido**: el asesor busca un cliente registrado, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
+Contiene la pantalla **Nuevo pedido**: el asesor busca un cliente activo, elige la sucursal de entrega, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
 
 - Ruta: `/pedidos/nuevo` (nombre `nuevo-pedido`, requiere sesión). Se abre con el botón "Nuevo Pedido" del panel.
 - Vista: `src/modulos/ventas/vistas/NuevoPedidoVista.vue`
-- Componentes: `src/modulos/ventas/componentes/` (secciones Cliente, Productos y Entrega, resumen lateral y modales Agregar producto, Confirmar pedido y Descartar pedido)
+- Componentes: `src/modulos/ventas/componentes/` (secciones Cliente, con el selector de sucursal, Productos y Entrega, resumen lateral y modales Agregar producto, Confirmar pedido y Descartar pedido)
 - Estado y validaciones: `src/modulos/ventas/controladores/usarNuevoPedido.ts` (formulario) y `usarBuscadorClientes.ts` (búsqueda de clientes)
 - Tipos: `src/modulos/ventas/interfaces/cliente.ts` y `pedido.ts`
 - Servicios:
   - Productos: reales, de `GET /api/inventario/actual` (`src/modulos/almacen/servicios/servicioInventario.ts`).
-  - Clientes: **simulado** en `servicioClientes.ts`. Endpoint propuesto `GET /api/clientes?busqueda=`, todavía no existe.
+  - Clientes: reales, de `GET /api/clientes/activos` (`servicioClientesVentas.ts`). La lista se pide una vez al hacer la primera búsqueda, se guarda en memoria mientras la pantalla está abierta y se filtra en el navegador por nombre (máximo 50 resultados, ordenados por nombre). Hoy la API solo trae `Id` y `Nombre`; si agrega `Telefono`, también se busca y se muestra sin más cambios. No usar `GET /api/clientes`: regresa contraseñas.
+  - Sucursales: reales, de `GET /api/sucursales-clientes?idCliente={id}` (`servicioClientesVentas.ts`). Solo se muestran las activas (`Estatus` 1).
   - Registro: **simulado** en `servicioPedidos.ts`. Endpoint propuesto `POST /api/pedidos`, todavía no existe. Devuelve folios consecutivos desde `#12348`.
 
-Para probar los mensajes de error sin API, cambia a `true` las constantes `FORZAR_ERROR_BUSQUEDA` (en `servicioClientes.ts`) o `FORZAR_ERROR_REGISTRO` (en `servicioPedidos.ts`). Regrésalas a `false` antes de subir cambios. Si la API no está corriendo, la sección Productos muestra "No es posible confirmar la disponibilidad en este momento." y no deja agregar productos.
+Para probar los avisos de error de clientes o sucursales, bloquea la petición en la pestaña Red de las herramientas del navegador (clic derecho → "Bloquear URL de solicitud") sobre `clientes/activos` o `sucursales-clientes`. Para el registro, cambia a `true` la constante `FORZAR_ERROR_REGISTRO` (en `servicioPedidos.ts`) y regrésala a `false` antes de subir cambios. Si la API no está corriendo, la sección Productos muestra "No es posible confirmar la disponibilidad en este momento." y no deja agregar productos.
 
 Si hay datos capturados, salir de la pantalla por el menú lateral, el botón atrás del navegador o "Cancelar" pide confirmar que se descartan. Recargar la página o cerrar la pestaña no pide confirmación.
 

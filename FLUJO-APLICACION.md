@@ -66,8 +66,9 @@ La base actual del sistema tiene estas rutas principales:
 
 - `NuevoPedidoVista.vue` se divide en tres pasos y un resumen lateral que se queda fijo al desplazar. En pantallas de menos de 900 px, el resumen va debajo del formulario.
 - **Cliente**:
-  - Busca clientes registrados por nombre, razón social o teléfono mientras se escribe, a partir de 3 caracteres y con 300 ms de espera.
+  - Busca clientes activos por nombre mientras se escribe, a partir de 3 caracteres y con 300 ms de espera. La lista sale de `GET /api/clientes/activos`, se pide una vez y se filtra en el navegador. Si la API agrega el teléfono, también se busca por él.
   - La lista se recorre con flechas, Enter y Escape.
+  - Al elegir el cliente se cargan sus sucursales activas. Si tiene una, se selecciona sola; si tiene varias, se elige en la lista; si no tiene, se avisa y no se puede registrar. La sucursal es obligatoria.
   - Los clientes nuevos no se dan de alta aquí.
 - **Productos**:
   - Salen del inventario real.
@@ -76,14 +77,14 @@ La base actual del sistema tiene estas rutas principales:
 - **Entrega**:
   - Modalidad: Entrega a domicilio o Recolección en congeladora.
   - Fecha requerida, desde hoy.
-  - A domicilio también pide dirección, que por defecto es la registrada del cliente, y referencias.
+  - A domicilio también pide dirección, que por defecto es la registrada de la sucursal elegida, y referencias.
   - Las observaciones son opcionales, de máximo 250 caracteres.
 - Al registrar se valida todo y el foco va al primer error. Si todo es válido, se confirma el resumen antes de enviar.
-- La búsqueda de clientes y el registro están simulados hasta que la API tenga `GET /api/clientes` y `POST /api/pedidos`.
+- El registro está simulado hasta conectar `POST /api/pedidos`.
 
 ```mermaid
 flowchart TD
-    A[Panel: Nuevo Pedido] --> B[Capturar cliente, productos y entrega]
+    A[Panel: Nuevo Pedido] --> B[Capturar cliente, sucursal, productos y entrega]
     B --> C[Registrar pedido]
     C --> D{"¿Datos válidos?"}
     D -- No --> E[Mostrar errores y enfocar el primero] --> B
@@ -112,4 +113,4 @@ El flujo general del sistema está pensado para que cada módulo tenga una respo
 
 ## Observación de desarrollo
 
-El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido usa el inventario real, pero la búsqueda de clientes y el registro del pedido siguen simulados. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.
+El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido usa el inventario, los clientes activos y sus sucursales reales, pero el registro del pedido sigue simulado. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.

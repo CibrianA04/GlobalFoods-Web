@@ -37,6 +37,7 @@ export const MENSAJES = {
   errorBusquedaClientes: 'No fue posible consultar los clientes. Intente nuevamente.',
   errorSucursales: 'No fue posible consultar las sucursales. Intente nuevamente.',
   errorRegistro: 'No fue posible registrar el pedido. Intente nuevamente.',
+  sinConexion: 'No es posible conectar con el servidor. Intente más tarde.',
 }
 
 export function mensajeExcedeDisponible(producto: ProductoVenta): string {
@@ -375,11 +376,15 @@ export function usarNuevoPedido(opciones: { alFallarSucursales: () => void }) {
       direccionEntrega: domicilio ? direccionEntrega.value.trim() : null,
       referencias: domicilio ? referencias.value.trim() : null,
       observaciones: observaciones.value.trim() || null,
-      productos: renglones.value.map((renglon) => ({
-        productoId: renglon.producto.productoId,
-        cantidadKg: cantidadValida(renglon) ?? 0,
-        precioKg: renglon.producto.precioKg,
+      // Importes y totales salen del resumen, para que coincidan con lo que vio la asesora.
+      productos: renglonesResumen.value.map((renglon) => ({
+        productoId: renglon.productoId,
+        cantidadKg: renglon.cantidadKg ?? 0,
+        precioKg: renglon.precioKg,
+        importe: renglon.importe,
       })),
+      totalKg: totalKg.value,
+      total: total.value,
     }
   }
 

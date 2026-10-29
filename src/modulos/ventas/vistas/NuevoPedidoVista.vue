@@ -19,7 +19,12 @@ import SeccionProductosVue from '@/modulos/ventas/componentes/SeccionProductosVu
 import SelectorSucursalVue from '@/modulos/ventas/componentes/SelectorSucursalVue.vue'
 import { MENSAJES, usarNuevoPedido } from '@/modulos/ventas/controladores/usarNuevoPedido'
 import { descartarClientesEnMemoria } from '@/modulos/ventas/servicios/servicioClientesVentas'
-import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { ErrorRegistroPedido } from '@/modulos/ventas/servicios/servicioPedidos'
+import {
+  cerrarSesion,
+  obtenerNombreUsuario,
+  obtenerMenuNavegacion,
+} from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 const itemsNavegacion = obtenerMenuNavegacion()
@@ -73,10 +78,23 @@ async function alConfirmar() {
     estadoConfirmacion.value = 'exito'
     // El pedido ya quedó registrado: se limpia de inmediato para que no se pueda reenviar.
     limpiarFormulario()
-  } catch {
+  } catch (error) {
     mostrarConfirmacion.value = false
-    avisar(MENSAJES.errorRegistro)
+    const motivo = error instanceof ErrorRegistroPedido ? error.motivo : null
+    if (motivo === 'sesion') {
+      alExpirarSesion()
+      return
+    }
+    avisar(motivo === 'conexion' ? MENSAJES.sinConexion : MENSAJES.errorRegistro)
   }
+}
+
+// La API rechazó el token: se cierra la sesión y se pide entrar de nuevo, sin preguntar por
+// el descarte (con la sesión vencida, lo capturado ya no se puede registrar).
+function alExpirarSesion() {
+  cerrarSesion()
+  salidaConfirmada = true
+  enrutador.push({ name: 'inicio-sesion', query: { sesion: 'expirada' } })
 }
 
 function limpiarFormulario() {

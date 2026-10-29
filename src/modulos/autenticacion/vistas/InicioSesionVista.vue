@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import BotonVue from '@/componentes/BotonVue.vue'
 import CampoTextoVue from '@/componentes/CampoTextoVue.vue'
@@ -12,10 +12,12 @@ import {
 } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 
 const enrutador = useRouter()
+const ruta = useRoute()
 const usuario = ref('')
 const contrasena = ref('')
 const cargando = ref(false)
-const error = ref('')
+// ?sesion=expirada: otra pantalla cerró la sesión porque la API rechazó el token.
+const error = ref(ruta.query.sesion === 'expirada' ? 'Su sesión expiró. Inicie sesión nuevamente.' : '')
 
 const iniciarSesion = async () => {
   error.value = ''

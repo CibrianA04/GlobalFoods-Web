@@ -31,13 +31,15 @@ export interface ProductoRegistroPedido {
   productoId: string
   cantidadKg: number
   /**
-   * Precio por kg que vio la asesora al capturar. Es solo una referencia: el backend debe
-   * calcular precio y total con sus propios datos y rechazar el pedido si el precio cambió.
+   * Precio por kg que vio la asesora al capturar. La API lo guarda tal cual; lo ideal es que
+   * lo revalide con sus propios datos y rechace el pedido si el precio cambió.
    */
   precioKg: number
+  /** cantidadKg × precioKg, redondeado a centavos (el importe del renglón en el resumen). */
+  importe: number
 }
 
-/** Cuerpo de POST /api/pedidos. */
+/** Datos del pedido capturado. servicioPedidos los convierte al cuerpo de POST /api/pedidos. */
 export interface DatosRegistroPedido {
   clienteId: number
   /** Sucursal del cliente a la que va el pedido. */
@@ -45,17 +47,24 @@ export interface DatosRegistroPedido {
   modalidad: ModalidadEntrega
   /** aaaa-mm-dd */
   fechaEntrega: string
-  /** null en recolección. */
+  /**
+   * null en recolección.
+   * TODO: la API no tiene campo para la dirección de entrega y no se envía; el pedido solo
+   * lleva la sucursal (IdSucursal). Si la asesora escribe otra dirección, se pierde.
+   */
   direccionEntrega: string | null
   /** null en recolección. */
   referencias: string | null
   /** null si no se capturaron. */
   observaciones: string | null
   productos: ProductoRegistroPedido[]
+  /** Totales del resumen. */
+  totalKg: number
+  total: number
 }
 
 export interface RespuestaRegistroPedido {
-  /** Folio asignado, p. ej. "#12348". */
+  /** Folio asignado: "#" y el Id que regresa la API, p. ej. "#57". */
   folio: string
 }
 

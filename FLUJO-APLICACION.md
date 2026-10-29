@@ -80,7 +80,7 @@ La base actual del sistema tiene estas rutas principales:
   - A domicilio también pide dirección, que por defecto es la registrada de la sucursal elegida, y referencias.
   - Las observaciones son opcionales, de máximo 250 caracteres.
 - Al registrar se valida todo y el foco va al primer error. Si todo es válido, se confirma el resumen antes de enviar.
-- El registro está simulado hasta conectar `POST /api/pedidos`.
+- El registro usa `POST /api/pedidos`. La modalidad, la fecha de entrega y las referencias viajan dentro de `Observaciones`, porque la API no tiene campos para ellas. El folio es `#` y el `Id` del pedido creado.
 
 ```mermaid
 flowchart TD
@@ -92,6 +92,8 @@ flowchart TD
     F -- Corregir --> B
     F -- Confirmar --> G[POST /api/pedidos]
     G -- Error --> H[Aviso: No fue posible registrar el pedido] --> B
+    G -- "Sin conexión o 10 s sin respuesta" --> L[Aviso: No es posible conectar con el servidor] --> B
+    G -- 401 --> M[Inicio de sesión: Su sesión expiró]
     G -- Éxito --> I["Pedido #folio registrado correctamente"]
     I -- Registrar otro pedido --> B
     I -- Ir al inicio --> A
@@ -113,4 +115,4 @@ El flujo general del sistema está pensado para que cada módulo tenga una respo
 
 ## Observación de desarrollo
 
-El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido usa el inventario, los clientes activos y sus sucursales reales, pero el registro del pedido sigue simulado. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.
+El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido ya usa el inventario, los clientes activos, sus sucursales y el registro de pedidos reales. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.

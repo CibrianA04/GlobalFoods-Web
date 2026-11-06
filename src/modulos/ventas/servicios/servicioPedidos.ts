@@ -1,23 +1,18 @@
 import { obtenerToken } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
-import { fechaHoyIso, formatearFecha } from '@/modulos/ventas/controladores/formatosPedido'
+import { ESTATUS } from '@/modulos/ventas/controladores/estadosPedido'
+import { fechaHoyIso } from '@/modulos/ventas/controladores/formatosPedido'
+import { armarObservaciones } from '@/modulos/ventas/controladores/observacionesPedido'
 import type {
   DatosRegistroPedido,
-  ModalidadEntrega,
+  LineaPedido,
+  Pedido,
   RespuestaRegistroPedido,
 } from '@/modulos/ventas/interfaces/pedido'
 
 const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-/** Estatus de un pedido nuevo. Después pasa a 2 surtido, 3 en reparto y 4 completado. */
-const ESTATUS_CREADO = 1
-
 /** Si la API no responde en este tiempo, se cancela la petición. */
 const LIMITE_ESPERA_MS = 10_000
-
-const MODALIDAD_EN_OBSERVACIONES: Record<ModalidadEntrega, string> = {
-  domicilio: 'A domicilio',
-  recoleccion: 'Recolección en congeladora',
-}
 
 /** Cuerpo de POST /api/pedidos. */
 interface PedidoAPI {
@@ -40,29 +35,95 @@ interface LineaPedidoAPI {
   Subtotal: number
 }
 
-/** Por qué falló el registro; la vista elige el mensaje según el motivo. */
-export type MotivoErrorRegistro = 'sesion' | 'conexion' | 'api'
+/** Pedido tal como llega de GET /api/pedidos y GET /api/pedidos/:id. */
+interface PedidoConsultadoAPI {
+  Id: number
+  IdCliente: number
+  IdSucursal: number
+  /** Fecha de registro como entero aaaammdd. */
+  Fecha: number
+  TotalKG: number
+  Total: number
+  Estatus: number
+  Observaciones: string | null
+  lineas?: LineaConsultadaAPI[]
+}
 
-export class ErrorRegistroPedido extends Error {
-  readonly motivo: MotivoErrorRegistro
+interface LineaConsultadaAPI {
+  Id: number
+  CodigoProducto: number | null
+  Talla: string
+  Cantidad: number
+  Precio: number
+  Subtotal: number
+}
 
-  constructor(motivo: MotivoErrorRegistro, mensaje: string) {
+/** Por qué falló una petición de pedidos; la vista elige el mensaje según el motivo. */
+export type MotivoErrorPedidos = 'sesion' | 'conexion' | 'no_encontrado' | 'api'
+
+export class ErrorPedidos extends Error {
+  readonly motivo: MotivoErrorPedidos
+
+  constructor(motivo: MotivoErrorPedidos, mensaje: string) {
     super(mensaje)
-    this.name = 'ErrorRegistroPedido'
+    this.name = 'ErrorPedidos'
     this.motivo = motivo
   }
 }
 
+/** El texto de `{ error }` de la API, si viene. */
+function mensajeDeError(datos: unknown): string {
+  return datos && typeof datos === 'object' && 'error' in datos && typeof datos.error === 'string' ? datos.error : ''
+}
+
 /**
- * La API no tiene campos para modalidad, fecha de entrega ni referencias: van en Observaciones,
- * seguidas de lo que capturó la asesora.
- * "A domicilio · Entrega 28/10/2026 · Ref: portón negro · Llamar antes de llegar"
+ * Petición a la API de pedidos con el token de la sesión; regresa el JSON de la respuesta.
+ * Lanza ErrorPedidos con motivo "sesion" si no hay sesión o la API responde 401, "conexion" si no
+ * hay conexión o pasan 10 s sin respuesta, "no_encontrado" con 404 y "api" con cualquier otro error.
+ * `accion` completa los mensajes: "registrar el pedido", "consultar los pedidos".
  */
-function armarObservaciones(datos: DatosRegistroPedido): string {
-  const partes = [MODALIDAD_EN_OBSERVACIONES[datos.modalidad], `Entrega ${formatearFecha(datos.fechaEntrega)}`]
-  if (datos.modalidad === 'domicilio' && datos.referencias) partes.push(`Ref: ${datos.referencias}`)
-  if (datos.observaciones) partes.push(datos.observaciones)
-  return partes.join(' · ')
+async function solicitar(ruta: string, accion: string, envio?: { metodo: 'POST'; cuerpo: unknown }): Promise<unknown> {
+  const token = obtenerToken()
+  if (!token) {
+    throw new ErrorPedidos('sesion', 'La sesión no está activa. Inicia sesión nuevamente.')
+  }
+
+  const encabezados: Record<string, string> = { Authorization: `Bearer ${token}` }
+  if (envio) encabezados['Content-Type'] = 'application/json'
+
+  const controlador = new AbortController()
+  const temporizador = setTimeout(() => controlador.abort(), LIMITE_ESPERA_MS)
+
+  let respuestaHttp: Response
+  try {
+    respuestaHttp = await fetch(`${URL_API.replace(/\/$/, '')}${ruta}`, {
+      method: envio?.metodo ?? 'GET',
+      headers: encabezados,
+      body: envio ? JSON.stringify(envio.cuerpo) : undefined,
+      signal: controlador.signal,
+    })
+  } catch {
+    throw new ErrorPedidos('conexion', `No se pudo conectar con el servidor para ${accion}.`)
+  } finally {
+    clearTimeout(temporizador)
+  }
+
+  const datosRespuesta: unknown = await respuestaHttp.json().catch(() => null)
+  const mensajeApi = mensajeDeError(datosRespuesta)
+
+  if (respuestaHttp.status === 401) {
+    throw new ErrorPedidos('sesion', mensajeApi || 'La sesión expiró.')
+  }
+
+  if (respuestaHttp.status === 404) {
+    throw new ErrorPedidos('no_encontrado', mensajeApi || 'No se encontró el pedido.')
+  }
+
+  if (!respuestaHttp.ok) {
+    throw new ErrorPedidos('api', mensajeApi || `No se pudo ${accion}.`)
+  }
+
+  return datosRespuesta
 }
 
 function aPedidoAPI(datos: DatosRegistroPedido): PedidoAPI {
@@ -72,7 +133,7 @@ function aPedidoAPI(datos: DatosRegistroPedido): PedidoAPI {
     Fecha: Number(fechaHoyIso().replace(/-/g, '')),
     TotalKG: datos.totalKg,
     Total: datos.total,
-    Estatus: ESTATUS_CREADO,
+    Estatus: ESTATUS.creado,
     Observaciones: armarObservaciones(datos),
     lineas: datos.productos.map((producto) => ({
       // TODO: ver ProductoVenta.productoId; por ahora es la talla.
@@ -84,6 +145,43 @@ function aPedidoAPI(datos: DatosRegistroPedido): PedidoAPI {
   }
 }
 
+/** Número de la API (puede llegar como texto, p. ej. un decimal); 0 si no es un número. */
+function aNumero(valor: unknown): number {
+  const numero = Number(valor)
+  return Number.isFinite(numero) ? numero : 0
+}
+
+/** 20261027 → "2026-10-27"; vacío si no es una fecha aaaammdd. */
+function fechaIsoDeEntero(fecha: unknown): string {
+  const texto = String(fecha)
+  return /^\d{8}$/.test(texto) ? `${texto.slice(0, 4)}-${texto.slice(4, 6)}-${texto.slice(6, 8)}` : ''
+}
+
+function aLinea(linea: LineaConsultadaAPI): LineaPedido {
+  return {
+    id: aNumero(linea.Id),
+    codigoProducto: linea.CodigoProducto ?? null,
+    talla: String(linea.Talla ?? '').trim(),
+    cantidadKg: aNumero(linea.Cantidad),
+    precioKg: aNumero(linea.Precio),
+    subtotal: aNumero(linea.Subtotal),
+  }
+}
+
+function aPedido(pedido: PedidoConsultadoAPI): Pedido {
+  return {
+    id: aNumero(pedido.Id),
+    idCliente: aNumero(pedido.IdCliente),
+    idSucursal: aNumero(pedido.IdSucursal),
+    fechaRegistro: fechaIsoDeEntero(pedido.Fecha),
+    totalKg: aNumero(pedido.TotalKG),
+    total: aNumero(pedido.Total),
+    estatus: aNumero(pedido.Estatus),
+    observaciones: pedido.Observaciones ?? '',
+    lineas: (pedido.lineas ?? []).map(aLinea),
+  }
+}
+
 /**
  * Registra un pedido nuevo (Estatus 1) y devuelve su folio: "#" y el Id que asigna la API.
  *
@@ -92,49 +190,45 @@ function aPedidoAPI(datos: DatosRegistroPedido): PedidoAPI {
  *   Cuerpo: PedidoAPI
  *   201 → el pedido creado, con su Id
  *   400/401/403/500 → { error: string }
- *
- * Lanza ErrorRegistroPedido con motivo "sesion" si no hay sesión o la API responde 401,
- * "conexion" si no hay conexión o pasan 10 s sin respuesta, y "api" con cualquier otro error.
  */
 export async function registrarPedido(datos: DatosRegistroPedido): Promise<RespuestaRegistroPedido> {
-  const token = obtenerToken()
-  if (!token) {
-    throw new ErrorRegistroPedido('sesion', 'La sesión no está activa. Inicia sesión nuevamente.')
+  const creado = (await solicitar('/api/pedidos', 'registrar el pedido', {
+    metodo: 'POST',
+    cuerpo: aPedidoAPI(datos),
+  })) as { Id?: number } | null
+
+  if (creado?.Id === undefined || creado.Id === null) {
+    throw new ErrorPedidos('api', 'La respuesta de la API no trae el Id del pedido.')
   }
 
-  const controlador = new AbortController()
-  const temporizador = setTimeout(() => controlador.abort(), LIMITE_ESPERA_MS)
+  return { folio: `#${creado.Id}` }
+}
 
-  let respuestaHttp: Response
-  try {
-    respuestaHttp = await fetch(`${URL_API.replace(/\/$/, '')}/api/pedidos`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(aPedidoAPI(datos)),
-      signal: controlador.signal,
-    })
-  } catch {
-    throw new ErrorRegistroPedido('conexion', 'No se pudo conectar con el servidor para registrar el pedido.')
-  } finally {
-    clearTimeout(temporizador)
+/**
+ * Todos los pedidos, con sus líneas, en el orden en que los regresa la API.
+ *
+ *   GET /api/pedidos
+ *   200 → PedidoConsultadoAPI[]
+ */
+export async function obtenerPedidos(): Promise<Pedido[]> {
+  const datos = await solicitar('/api/pedidos', 'consultar los pedidos')
+  if (!Array.isArray(datos)) {
+    throw new ErrorPedidos('api', 'La respuesta de la API no trae una lista de pedidos válida.')
   }
+  return (datos as PedidoConsultadoAPI[]).map(aPedido)
+}
 
-  const datosRespuesta = (await respuestaHttp.json().catch(() => null)) as { Id?: number; error?: string } | null
-
-  if (respuestaHttp.status === 401) {
-    throw new ErrorRegistroPedido('sesion', datosRespuesta?.error || 'La sesión expiró.')
+/**
+ * Un pedido con sus líneas. Si no existe, lanza ErrorPedidos con motivo "no_encontrado".
+ *
+ *   GET /api/pedidos/:id
+ *   200 → PedidoConsultadoAPI
+ *   404 → { error: string }
+ */
+export async function obtenerPedidoPorId(id: number): Promise<Pedido> {
+  const datos = await solicitar(`/api/pedidos/${encodeURIComponent(id)}`, 'consultar el pedido')
+  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) {
+    throw new ErrorPedidos('api', 'La respuesta de la API no trae un pedido válido.')
   }
-
-  if (!respuestaHttp.ok) {
-    throw new ErrorRegistroPedido('api', datosRespuesta?.error || 'No se pudo registrar el pedido.')
-  }
-
-  if (datosRespuesta?.Id === undefined || datosRespuesta.Id === null) {
-    throw new ErrorRegistroPedido('api', 'La respuesta de la API no trae el Id del pedido.')
-  }
-
-  return { folio: `#${datosRespuesta.Id}` }
+  return aPedido(datos as PedidoConsultadoAPI)
 }

@@ -68,6 +68,32 @@ export interface RespuestaRegistroPedido {
   folio: string
 }
 
+/** Pedido registrado, tal como lo devuelve la consulta de pedidos. */
+export interface Pedido {
+  id: number
+  idCliente: number
+  idSucursal: number
+  /** Fecha de registro, aaaa-mm-dd (la API no guarda la hora); vacía si la API trae una fecha no válida. */
+  fechaRegistro: string
+  totalKg: number
+  total: number
+  /** Ver controladores/estadosPedido.ts. */
+  estatus: number
+  /** Texto tal como viene; leerObservaciones() separa los datos de entrega de las notas. */
+  observaciones: string
+  lineas: LineaPedido[]
+}
+
+/** Producto dentro de un pedido registrado. */
+export interface LineaPedido {
+  id: number
+  codigoProducto: number | null
+  talla: string
+  cantidadKg: number
+  precioKg: number
+  subtotal: number
+}
+
 /** Renglón ya calculado para mostrar en el resumen y en la confirmación. */
 export interface RenglonResumen {
   productoId: string

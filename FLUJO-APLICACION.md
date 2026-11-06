@@ -40,7 +40,9 @@ La base actual del sistema tiene estas rutas principales:
 - `/inicio-sesion` → pantalla de acceso
 - `/panel` → panel principal de la app
 - `/usuarios` → vista de administración de usuarios
-- `/pedidos/nuevo` → captura y registro de un pedido (desde el botón "Nuevo Pedido" del panel)
+- `/pedidos` → lista de todos los pedidos (desde "Pedidos" en el menú lateral)
+- `/pedidos/nuevo` → captura y registro de un pedido (desde el botón "Nuevo Pedido" del panel o de la lista de pedidos)
+- `/pedidos/:id` → detalle de un pedido (desde el folio en la lista)
 
 ## Lógica funcional por pantalla
 
@@ -102,6 +104,29 @@ flowchart TD
     J -- Descartar --> K[Ruta elegida]
 ```
 
+### 5. Pedidos (módulo de ventas)
+
+- **Lista** (`PedidosVista.vue`): todos los pedidos de `GET /api/pedidos`, del más reciente al más antiguo, en páginas de 10.
+  - Filtros por estado (Todos, Pendiente, Surtido, En reparto, Entregado), cada uno con su conteo según la búsqueda y las fechas.
+  - Búsqueda por folio o nombre del cliente, sin importar acentos ni mayúsculas, y rango Desde / Hasta sobre la fecha de registro.
+  - Entrega y modalidad salen de leer `Observaciones`; si el pedido no trae ese formato, se muestra "—".
+- **Detalle** (`DetallePedidoVista.vue`): barra de avance de los cuatro estados, cliente y entrega, y productos con su total. Si el folio no existe, se avisa con un enlace de regreso a la lista.
+- Solo consulta: no se cancelan ni se editan pedidos, porque la API todavía no tiene estado Cancelado ni historial de cambios.
+- Si la API responde 401, se cierra la sesión y se pasa a inicio de sesión con "Su sesión expiró. Inicie sesión nuevamente."
+
+```mermaid
+flowchart TD
+    A[Menú lateral: Pedidos] --> B[GET /api/pedidos + clientes activos]
+    B -- Error --> C[No fue posible cargar los pedidos · Reintentar] --> B
+    B -- 401 --> S[Inicio de sesión: Su sesión expiró]
+    B -- Éxito --> D[Lista con filtros y páginas]
+    D -- Cambiar de página --> E[Sucursales de los clientes que falten] --> D
+    D -- Clic en el folio --> F[GET /api/pedidos/:id]
+    F -- 404 --> G["No existe un pedido con el folio #id"]
+    F -- Éxito --> H[Detalle: avance, cliente y entrega, productos]
+    D -- Nuevo pedido --> N["/pedidos/nuevo"]
+```
+
 ## Relación con los módulos
 
 El flujo general del sistema está pensado para que cada módulo tenga una responsabilidad clara:
@@ -115,4 +140,4 @@ El flujo general del sistema está pensado para que cada módulo tenga una respo
 
 ## Observación de desarrollo
 
-El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido ya usa el inventario, los clientes activos, sus sucursales y el registro de pedidos reales. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.
+El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido ya usa el inventario, los clientes activos, sus sucursales y el registro de pedidos reales, y la pestaña Pedidos consulta la lista y el detalle de los pedidos. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.

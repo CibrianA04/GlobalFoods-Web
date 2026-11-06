@@ -110,7 +110,19 @@ Se encarga del módulo de administración y usuarios.
 
 ### Ventas
 
-Contiene la pantalla **Nuevo pedido**: el asesor busca un cliente activo, elige la sucursal de entrega, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
+Contiene la pestaña **Pedidos** (lista y detalle, solo consulta) y la pantalla **Nuevo pedido**: el asesor busca un cliente activo, elige la sucursal de entrega, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
+
+#### Pedidos (lista y detalle)
+
+- Rutas: `/pedidos` (nombre `pedidos`) y `/pedidos/:id` (nombre `detalle-pedido`; solo ids numéricos, para no chocar con `/pedidos/nuevo`). Ambas requieren sesión. Se abren desde "Pedidos" en el menú lateral.
+- Vistas: `PedidosVista.vue` y `DetallePedidoVista.vue`; componentes `FiltrosPedidosVue.vue` (píldoras de estado, búsqueda y fechas) y `AvancePedidoVue.vue` (barra de avance).
+- Controladores: `usarListaPedidos.ts` (carga, filtros, conteos y páginas de 10, todo en la web), `usarDetallePedido.ts`, `usarDirectorioPedidos.ts` (nombres de cliente y sucursal) y `sesionVencida.ts` (401 → inicio de sesión).
+- Estados: `estadosPedido.ts` traduce el `Estatus` de la API: 1 Pendiente, 2 Surtido, 3 En reparto, 4 Entregado. Un número desconocido se ve como "Estado {n}". Si cambian los nombres, se ajustan solo ahí.
+- Observaciones: `observacionesPedido.ts` arma el texto que guarda Nuevo pedido y lo lee de vuelta (modalidad, fecha de entrega, `Dir:`, `Ref:` y notas). Un pedido sin ese formato muestra el texto completo como observaciones.
+- Datos: `GET /api/pedidos` y `GET /api/pedidos/:id` (`servicioPedidos.ts`, con el mismo manejo de 401 y límite de 10 s que el registro). El pedido solo trae `IdCliente` e `IdSucursal`: el nombre del cliente sale de `GET /api/clientes/activos` ("Cliente #Id" si está inactivo) y las sucursales se piden por cliente, solo para los de la página a la vista, una vez cada uno ("Sucursal #Id" si no se encuentra).
+- No se usa `PUT` ni `DELETE /api/pedidos`. No hay botón de cancelar ni historial: la API todavía no tiene estado Cancelado ni guarda los cambios de estado.
+
+#### Nuevo pedido
 
 - Ruta: `/pedidos/nuevo` (nombre `nuevo-pedido`, requiere sesión). Se abre con el botón "Nuevo Pedido" del panel.
 - Vista: `src/modulos/ventas/vistas/NuevoPedidoVista.vue`
@@ -141,7 +153,9 @@ El enrutador usa historial HTML5 configurado con Vue Router:
 - `/inicio-sesion`
 - `/panel`
 - `/usuarios`
+- `/pedidos`
 - `/pedidos/nuevo`
+- `/pedidos/:id` (solo números)
 
 ## 10. Convenciones de desarrollo
 

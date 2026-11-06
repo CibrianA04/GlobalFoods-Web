@@ -4,7 +4,7 @@
 // los modales y la navegación.
 
 import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { RouterLink, onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import AvisoVue from '@/componentes/AvisoVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
@@ -17,14 +17,11 @@ import SeccionClienteVue from '@/modulos/ventas/componentes/SeccionClienteVue.vu
 import SeccionEntregaVue from '@/modulos/ventas/componentes/SeccionEntregaVue.vue'
 import SeccionProductosVue from '@/modulos/ventas/componentes/SeccionProductosVue.vue'
 import SelectorSucursalVue from '@/modulos/ventas/componentes/SelectorSucursalVue.vue'
+import { salirPorSesionVencida } from '@/modulos/ventas/controladores/sesionVencida'
 import { MENSAJES, usarNuevoPedido } from '@/modulos/ventas/controladores/usarNuevoPedido'
 import { descartarClientesEnMemoria } from '@/modulos/ventas/servicios/servicioClientesVentas'
-import { ErrorRegistroPedido } from '@/modulos/ventas/servicios/servicioPedidos'
-import {
-  cerrarSesion,
-  obtenerNombreUsuario,
-  obtenerMenuNavegacion,
-} from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { ErrorPedidos } from '@/modulos/ventas/servicios/servicioPedidos'
+import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
 const itemsNavegacion = obtenerMenuNavegacion()
@@ -80,7 +77,7 @@ async function alConfirmar() {
     limpiarFormulario()
   } catch (error) {
     mostrarConfirmacion.value = false
-    const motivo = error instanceof ErrorRegistroPedido ? error.motivo : null
+    const motivo = error instanceof ErrorPedidos ? error.motivo : null
     if (motivo === 'sesion') {
       alExpirarSesion()
       return
@@ -92,9 +89,8 @@ async function alConfirmar() {
 // La API rechazó el token: se cierra la sesión y se pide entrar de nuevo, sin preguntar por
 // el descarte (con la sesión vencida, lo capturado ya no se puede registrar).
 function alExpirarSesion() {
-  cerrarSesion()
   salidaConfirmada = true
-  enrutador.push({ name: 'inicio-sesion', query: { sesion: 'expirada' } })
+  salirPorSesionVencida(enrutador)
 }
 
 function limpiarFormulario() {
@@ -150,7 +146,7 @@ onBeforeRouteLeave((destino) => {
     <div class="nuevo-pedido">
       <nav class="migas" aria-label="Ruta de navegación">
         <ol class="migas__lista">
-          <li>Pedidos</li>
+          <li><RouterLink :to="{ name: 'pedidos' }" class="migas__enlace">Pedidos</RouterLink></li>
           <li aria-current="page">
             <span class="migas__separador" aria-hidden="true">›</span>
             Nuevo pedido
@@ -282,6 +278,16 @@ onBeforeRouteLeave((destino) => {
 .migas__separador {
   margin-right: 8px;
   color: var(--gf-texto-tenue);
+}
+
+.migas__enlace {
+  color: var(--gf-secundario);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.migas__enlace:hover {
+  text-decoration: underline;
 }
 
 .nuevo-pedido__encabezado {

@@ -99,11 +99,11 @@ GlobalFoods-Web/
 │  │  │  └─ vistas/PanelVue.vue
 │  │  ├─ reparto/
 │  │  └─ ventas/
-│  │     ├─ componentes/    # secciones y modales de Nuevo pedido
-│  │     ├─ controladores/  # usarNuevoPedido, usarBuscadorClientes, formatosPedido
+│  │     ├─ componentes/    # secciones y modales de Nuevo pedido; filtros y barra de avance de Pedidos
+│  │     ├─ controladores/  # usarNuevoPedido, usarListaPedidos, usarDetallePedido, estadosPedido, observacionesPedido…
 │  │     ├─ interfaces/     # cliente.ts, pedido.ts
-│  │     ├─ servicios/      # servicioClientesVentas.ts (clientes y sucursales), servicioPedidos.ts (registro)
-│  │     └─ vistas/NuevoPedidoVista.vue
+│  │     ├─ servicios/      # servicioClientesVentas.ts (clientes y sucursales), servicioPedidos.ts (registro y consulta)
+│  │     └─ vistas/         # NuevoPedidoVista.vue, PedidosVista.vue, DetallePedidoVista.vue
 │  └─ pruebas/
 ```
 
@@ -114,7 +114,9 @@ El enrutador está configurado con estas rutas principales:
 - `/inicio-sesion` — pantalla de acceso
 - `/panel` — vista principal del sistema
 - `/usuarios` — listado de usuarios
+- `/pedidos` — lista de todos los pedidos (nombre de ruta `pedidos`)
 - `/pedidos/nuevo` — captura y registro de un pedido (nombre de ruta `nuevo-pedido`)
+- `/pedidos/:id` — detalle de un pedido, solo ids numéricos (nombre de ruta `detalle-pedido`)
 - `/` — redirige a `/inicio-sesion`
 
 ## Organización y convenciones
@@ -144,6 +146,8 @@ El enrutador está configurado con estas rutas principales:
 La interfaz de inicio de sesión consulta `POST /api/auth/login`, conserva el token de acceso y dirige al panel. El panel y Nuevo pedido leen el inventario real de `GET /api/inventario/actual`. Las vistas de usuarios y clientes siguen usando datos de demostración.
 
 La pantalla **Nuevo pedido** (`/pedidos/nuevo`, módulo de ventas) captura cliente y sucursal, productos y entrega, pide confirmación y registra el pedido. La búsqueda de clientes usa `GET /api/clientes/activos` y las sucursales del cliente elegido salen de `GET /api/sucursales-clientes?idCliente={id}`. El registro envía el pedido a `POST /api/pedidos` desde `src/modulos/ventas/servicios/servicioPedidos.ts` y muestra como folio el `Id` que asigna la API.
+
+La pestaña **Pedidos** (`/pedidos`) lista todos los pedidos de `GET /api/pedidos` con filtros por estado, búsqueda por folio o cliente, rango de fechas de registro y páginas de 10; cada folio abre su detalle (`/pedidos/:id`, con `GET /api/pedidos/:id`). Es solo consulta: todavía no se cancelan pedidos, porque la API no tiene estado Cancelado ni historial de cambios.
 
 ## Documentación complementaria
 

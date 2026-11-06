@@ -57,14 +57,25 @@ export function inicialesCliente(nombre: string): string {
     .toUpperCase()
 }
 
-export const MODALIDADES: Record<ModalidadEntrega, { titulo: string; descripcion: string; icono: NombreIcono }> = {
+/** Minúsculas y sin acentos, para comparar sin importar cómo se escribió. */
+export function normalizarTexto(texto: string): string {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+}
+
+export const MODALIDADES: Record<
+  ModalidadEntrega,
+  { titulo: string; etiquetaCorta: string; descripcion: string; icono: NombreIcono }
+> = {
   domicilio: {
     titulo: 'Entrega a domicilio',
+    /** Para tablas y detalles: "A domicilio". */
+    etiquetaCorta: 'A domicilio',
     descripcion: 'El repartidor lleva el pedido a la dirección del cliente.',
     icono: 'camion',
   },
   recoleccion: {
     titulo: 'Recolección en congeladora',
+    etiquetaCorta: 'Recolección',
     descripcion: 'El cliente recoge su pedido directamente en la congeladora.',
     icono: 'congeladora',
   },

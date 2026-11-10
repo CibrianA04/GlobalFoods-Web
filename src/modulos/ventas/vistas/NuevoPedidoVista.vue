@@ -77,13 +77,20 @@ async function alConfirmar() {
     limpiarFormulario()
   } catch (error) {
     mostrarConfirmacion.value = false
-    const motivo = error instanceof ErrorPedidos ? error.motivo : null
-    if (motivo === 'sesion') {
+    const errorPedidos = error instanceof ErrorPedidos ? error : null
+    if (errorPedidos?.motivo === 'sesion') {
       alExpirarSesion()
       return
     }
-    avisar(motivo === 'conexion' ? MENSAJES.sinConexion : MENSAJES.errorRegistro)
+    avisar(mensajeErrorRegistro(errorPedidos))
   }
+}
+
+function mensajeErrorRegistro(error: ErrorPedidos | null): string {
+  if (error?.motivo === 'conexion') return MENSAJES.sinConexion
+  // 400: la API rechazó los datos y su mensaje dice por qué.
+  if (error?.motivo === 'datos_invalidos' && error.mensajeApi) return error.mensajeApi
+  return MENSAJES.errorRegistro
 }
 
 // La API rechazó el token: se cierra la sesión y se pide entrar de nuevo, sin preguntar por

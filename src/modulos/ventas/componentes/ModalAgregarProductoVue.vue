@@ -8,6 +8,7 @@ import CampoTextoVue from '@/componentes/CampoTextoVue.vue'
 import ChipEstadoVue from '@/componentes/ChipEstadoVue.vue'
 import ModalVue from '@/componentes/ModalVue.vue'
 import { formatearKg, formatearMoneda } from '@/modulos/ventas/controladores/formatosPedido'
+import { estaAgotado, tieneCodigoProducto } from '@/modulos/ventas/controladores/usarNuevoPedido'
 import type { ProductoVenta } from '@/modulos/ventas/interfaces/pedido'
 
 interface Props {
@@ -36,7 +37,8 @@ const filtrados = computed(() => {
   const texto = normalizar(busqueda.value)
   if (!texto) return props.productos
   return props.productos.filter(
-    (producto) => normalizar(producto.nombre).includes(texto) || normalizar(producto.productoId).includes(texto),
+    (producto) =>
+      normalizar(producto.nombre).includes(texto) || String(producto.codigoProducto ?? '').includes(texto),
   )
 })
 
@@ -52,7 +54,14 @@ watch(
 )
 
 const estaAgregado = (producto: ProductoVenta) => props.agregados.includes(producto.productoId)
-const estaAgotado = (producto: ProductoVenta) => producto.disponibleKg <= 0
+const sePuedeAgregar = (producto: ProductoVenta) =>
+  tieneCodigoProducto(producto) && !estaAgotado(producto) && !estaAgregado(producto)
+
+function chip(producto: ProductoVenta) {
+  if (!tieneCodigoProducto(producto)) return { estado: 'cancelado', etiqueta: 'No disponible' } as const
+  if (estaAgotado(producto)) return { estado: 'cancelado', etiqueta: 'Agotado' } as const
+  return { estado: 'entregado', etiqueta: 'Disponible' } as const
+}
 
 // El botón queda deshabilitado al agregar; el foco regresa al buscador para seguir eligiendo.
 async function agregar(producto: ProductoVenta) {
@@ -85,18 +94,18 @@ async function agregar(producto: ProductoVenta) {
             <strong>{{ formatearMoneda(producto.precioKg) }}</strong> por kg ·
             {{ formatearKg(producto.disponibleKg) }} disponibles
           </p>
+          <p v-if="!tieneCodigoProducto(producto)" class="productos-modal__detalle">
+            Sin código de producto en el inventario.
+          </p>
         </div>
 
-        <ChipEstadoVue
-          :estado="estaAgotado(producto) ? 'cancelado' : 'entregado'"
-          :etiqueta="estaAgotado(producto) ? 'Agotado' : 'Disponible'"
-        />
+        <ChipEstadoVue v-bind="chip(producto)" />
 
         <div class="productos-modal__accion">
           <BotonVue
             :variante="estaAgregado(producto) ? 'secundario' : 'primario'"
             compacto
-            :deshabilitado="estaAgotado(producto) || estaAgregado(producto)"
+            :deshabilitado="!sePuedeAgregar(producto)"
             :aria-label="estaAgregado(producto) ? `${producto.nombre} agregado` : `Agregar ${producto.nombre}`"
             @click="agregar(producto)"
           >

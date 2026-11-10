@@ -28,7 +28,8 @@ interface PedidoAPI {
 }
 
 interface LineaPedidoAPI {
-  // TODO: falta CodigoProducto; el inventario no lo trae.
+  /** Entero positivo; la API rechaza la línea sin él. */
+  CodigoProducto: number
   Talla: string
   Cantidad: number
   Precio: number
@@ -58,16 +59,22 @@ interface LineaConsultadaAPI {
   Subtotal: number
 }
 
-/** Por qué falló una petición de pedidos; la vista elige el mensaje según el motivo. */
-export type MotivoErrorPedidos = 'sesion' | 'conexion' | 'no_encontrado' | 'api'
+/**
+ * Por qué falló una petición de pedidos; la vista elige el mensaje según el motivo.
+ * "datos_invalidos" es un 400: la API rechazó lo que se le mandó.
+ */
+export type MotivoErrorPedidos = 'sesion' | 'conexion' | 'no_encontrado' | 'datos_invalidos' | 'api'
 
 export class ErrorPedidos extends Error {
   readonly motivo: MotivoErrorPedidos
+  /** Texto de `{ error }` que mandó la API; vacío si no mandó ninguno. */
+  readonly mensajeApi: string
 
-  constructor(motivo: MotivoErrorPedidos, mensaje: string) {
+  constructor(motivo: MotivoErrorPedidos, mensaje: string, mensajeApi = '') {
     super(mensaje)
     this.name = 'ErrorPedidos'
     this.motivo = motivo
+    this.mensajeApi = mensajeApi
   }
 }
 
@@ -79,7 +86,8 @@ function mensajeDeError(datos: unknown): string {
 /**
  * Petición a la API de pedidos con el token de la sesión; regresa el JSON de la respuesta.
  * Lanza ErrorPedidos con motivo "sesion" si no hay sesión o la API responde 401, "conexion" si no
- * hay conexión o pasan 10 s sin respuesta, "no_encontrado" con 404 y "api" con cualquier otro error.
+ * hay conexión o pasan 10 s sin respuesta, "no_encontrado" con 404, "datos_invalidos" con 400 y
+ * "api" con cualquier otro error. Si la API manda `{ error }`, queda en `mensajeApi`.
  * `accion` completa los mensajes: "registrar el pedido", "consultar los pedidos".
  */
 async function solicitar(ruta: string, accion: string, envio?: { metodo: 'POST'; cuerpo: unknown }): Promise<unknown> {
@@ -112,15 +120,19 @@ async function solicitar(ruta: string, accion: string, envio?: { metodo: 'POST';
   const mensajeApi = mensajeDeError(datosRespuesta)
 
   if (respuestaHttp.status === 401) {
-    throw new ErrorPedidos('sesion', mensajeApi || 'La sesión expiró.')
+    throw new ErrorPedidos('sesion', mensajeApi || 'La sesión expiró.', mensajeApi)
   }
 
   if (respuestaHttp.status === 404) {
-    throw new ErrorPedidos('no_encontrado', mensajeApi || 'No se encontró el pedido.')
+    throw new ErrorPedidos('no_encontrado', mensajeApi || 'No se encontró el pedido.', mensajeApi)
+  }
+
+  if (respuestaHttp.status === 400) {
+    throw new ErrorPedidos('datos_invalidos', mensajeApi || `No se pudo ${accion}.`, mensajeApi)
   }
 
   if (!respuestaHttp.ok) {
-    throw new ErrorPedidos('api', mensajeApi || `No se pudo ${accion}.`)
+    throw new ErrorPedidos('api', mensajeApi || `No se pudo ${accion}.`, mensajeApi)
   }
 
   return datosRespuesta
@@ -136,8 +148,8 @@ function aPedidoAPI(datos: DatosRegistroPedido): PedidoAPI {
     Estatus: ESTATUS.creado,
     Observaciones: armarObservaciones(datos),
     lineas: datos.productos.map((producto) => ({
-      // TODO: ver ProductoVenta.productoId; por ahora es la talla.
-      Talla: producto.productoId,
+      CodigoProducto: producto.codigoProducto,
+      Talla: producto.talla,
       Cantidad: producto.cantidadKg,
       Precio: producto.precioKg,
       Subtotal: producto.importe,

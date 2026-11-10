@@ -29,8 +29,13 @@ interface SucursalClienteAPI {
  * Pide una lista a la API con el token de la sesión. Lanza error si no hay sesión, si no hay
  * conexión, si la API responde con error o si la respuesta no es una lista.
  * `descripcion` completa los mensajes: "los clientes", "las sucursales".
+ * `encabezados` se envían junto con el token.
  */
-async function consultarLista<T>(ruta: string, descripcion: string): Promise<T[]> {
+async function consultarLista<T>(
+  ruta: string,
+  descripcion: string,
+  encabezados: Record<string, string> = {},
+): Promise<T[]> {
   const token = obtenerToken()
   if (!token) {
     throw new Error('La sesión no está activa. Inicia sesión nuevamente.')
@@ -39,7 +44,7 @@ async function consultarLista<T>(ruta: string, descripcion: string): Promise<T[]
   let respuestaHttp: Response
   try {
     respuestaHttp = await fetch(`${URL_API.replace(/\/$/, '')}${ruta}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { ...encabezados, Authorization: `Bearer ${token}` },
     })
   } catch {
     throw new Error(`No se pudo conectar con el servidor para consultar ${descripcion}.`)
@@ -146,6 +151,7 @@ export async function buscarClientes(criterio: string): Promise<Cliente[]> {
  *
  *   GET /api/sucursales-clientes?idCliente={id}
  *   Authorization: Bearer <token>
+ *   X-Id-Cliente: {id}   (obligatorio; sin él la API responde 400)
  *   200 → [{ Id, IdCliente, NombreSucursal, Direccion, Telefono, Estatus }]
  *
  * Si la consulta falla lanza error (no devuelve una lista vacía), para no confundir un fallo
@@ -155,6 +161,7 @@ async function consultarSucursales(idCliente: number): Promise<SucursalClienteAP
   const sucursales = await consultarLista<SucursalClienteAPI>(
     `/api/sucursales-clientes?idCliente=${encodeURIComponent(idCliente)}`,
     'las sucursales',
+    { 'X-Id-Cliente': String(idCliente) },
   )
   // Se revisa también el cliente por si la API llegara a ignorar el filtro.
   return sucursales.filter((sucursal) => sucursal.IdCliente === idCliente)

@@ -2,13 +2,15 @@ export type ModalidadEntrega = 'domicilio' | 'recoleccion'
 
 /** Producto que se puede vender, armado a partir del inventario actual. */
 export interface ProductoVenta {
-  /**
-   * Identificador del producto.
-   * TODO: el inventario (GET /api/inventario/actual) no trae id, así que por ahora es la talla.
-   * Cuando haya otras presentaciones de la misma talla (con cabeza, pelado, etc.) la talla
-   * dejará de ser única: la API debe devolver un id propio y este campo debe tomarlo de ahí.
-   */
+  /** Identificador del producto en la captura: String(codigoProducto). */
   productoId: string
+  /**
+   * Código del producto (CodigoProducto en POST /api/pedidos).
+   * null si el inventario no lo trae como entero positivo: el producto se muestra como no
+   * disponible y no se puede agregar.
+   */
+  codigoProducto: number | null
+  talla: string
   /** Nombre para mostrar, p. ej. "Camarón 16/20". */
   nombre: string
   presentacion: string
@@ -29,6 +31,8 @@ export interface RenglonPedido {
 /** Producto dentro de los datos para registrar el pedido. */
 export interface ProductoRegistroPedido {
   productoId: string
+  codigoProducto: number
+  talla: string
   cantidadKg: number
   /**
    * Precio por kg que vio la asesora al capturar. La API lo guarda tal cual; lo ideal es que

@@ -9,6 +9,7 @@ import type { Cliente, SucursalCliente } from '@/modulos/ventas/interfaces/clien
 import type {
   DatosRegistroPedido,
   ModalidadEntrega,
+  ProductoRegistroPedido,
   ProductoVenta,
   RenglonPedido,
   RenglonResumen,
@@ -64,16 +65,27 @@ export function idCampoCantidad(productoId: string): string {
   return `pedido-cantidad-${productoId.replace(/[^a-zA-Z0-9]+/g, '-')}`
 }
 
-export function aProductoVenta(articulo: ArticuloInventario): ProductoVenta {
+/**
+ * `indice` (posición en el inventario) solo se usa para dar un productoId único a los artículos
+ * sin código, que se muestran como no disponibles.
+ */
+export function aProductoVenta(articulo: ArticuloInventario, indice: number): ProductoVenta {
+  const { codigoProducto } = articulo
   return {
-    // TODO: ver ProductoVenta.productoId; el inventario no trae id y por ahora se usa la talla.
-    productoId: articulo.talla,
+    productoId: codigoProducto !== null ? String(codigoProducto) : `sin-codigo-${indice}`,
+    codigoProducto,
+    talla: articulo.talla,
     nombre: `Camarón ${articulo.talla}`,
     presentacion: PRESENTACION_PRODUCTO,
     precioKg: articulo.precio,
     disponibleKg: articulo.cantidadKg,
   }
 }
+
+/** Sin código de producto la API rechaza el pedido; esos productos no se pueden agregar. */
+export const tieneCodigoProducto = (producto: ProductoVenta) => producto.codigoProducto !== null
+
+export const estaAgotado = (producto: ProductoVenta) => producto.disponibleKg <= 0
 
 const redondear = (valor: number) => Math.round(valor * 100) / 100
 
@@ -203,7 +215,7 @@ export function usarNuevoPedido(opciones: { alFallarSucursales: () => void }) {
   }
 
   function agregarProducto(producto: ProductoVenta) {
-    if (producto.disponibleKg <= 0 || buscarRenglon(producto.productoId)) return
+    if (!tieneCodigoProducto(producto) || estaAgotado(producto) || buscarRenglon(producto.productoId)) return
     renglones.value.push({ producto, cantidadCapturada: '1' })
   }
 
@@ -315,18 +327,18 @@ export function usarNuevoPedido(opciones: { alFallarSucursales: () => void }) {
 
   // Totales y resumen
 
-  const renglonesResumen = computed<RenglonResumen[]>(() =>
-    renglones.value.map((renglon) => {
-      const cantidadKg = cantidadValida(renglon)
-      return {
-        productoId: renglon.producto.productoId,
-        nombre: renglon.producto.nombre,
-        cantidadKg,
-        precioKg: renglon.producto.precioKg,
-        importe: cantidadKg === null ? 0 : redondear(cantidadKg * renglon.producto.precioKg),
-      }
-    }),
-  )
+  function aRenglonResumen(renglon: RenglonPedido): RenglonResumen {
+    const cantidadKg = cantidadValida(renglon)
+    return {
+      productoId: renglon.producto.productoId,
+      nombre: renglon.producto.nombre,
+      cantidadKg,
+      precioKg: renglon.producto.precioKg,
+      importe: cantidadKg === null ? 0 : redondear(cantidadKg * renglon.producto.precioKg),
+    }
+  }
+
+  const renglonesResumen = computed<RenglonResumen[]>(() => renglones.value.map(aRenglonResumen))
 
   const totalKg = computed(() =>
     redondear(renglonesResumen.value.reduce((suma, renglon) => suma + (renglon.cantidadKg ?? 0), 0)),
@@ -362,6 +374,17 @@ export function usarNuevoPedido(opciones: { alFallarSucursales: () => void }) {
 
   // Registro
 
+  /** Renglón para registrar; importe con el mismo cálculo que el resumen que vio la asesora. */
+  function aProductoRegistro(renglon: RenglonPedido): ProductoRegistroPedido {
+    const { codigoProducto, talla, nombre } = renglon.producto
+    // agregarProducto() no deja agregar productos sin código, así que no debería pasar.
+    if (codigoProducto === null) {
+      throw new Error(`${nombre} no tiene código de producto.`)
+    }
+    const { productoId, cantidadKg, precioKg, importe } = aRenglonResumen(renglon)
+    return { productoId, codigoProducto, talla, cantidadKg: cantidadKg ?? 0, precioKg, importe }
+  }
+
   function datosParaRegistrar(
     clienteActual: Cliente,
     sucursalActual: SucursalCliente,
@@ -376,13 +399,8 @@ export function usarNuevoPedido(opciones: { alFallarSucursales: () => void }) {
       direccionEntrega: domicilio ? direccionEntrega.value.trim() : null,
       referencias: domicilio ? referencias.value.trim() : null,
       observaciones: observaciones.value.trim() || null,
-      // Importes y totales salen del resumen, para que coincidan con lo que vio la asesora.
-      productos: renglonesResumen.value.map((renglon) => ({
-        productoId: renglon.productoId,
-        cantidadKg: renglon.cantidadKg ?? 0,
-        precioKg: renglon.precioKg,
-        importe: renglon.importe,
-      })),
+      productos: renglones.value.map(aProductoRegistro),
+      // Los totales salen del resumen, para que coincidan con lo que vio la asesora.
       totalKg: totalKg.value,
       total: total.value,
     }

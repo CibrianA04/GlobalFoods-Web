@@ -40,7 +40,9 @@ La base actual del sistema tiene estas rutas principales:
 - `/inicio-sesion` → pantalla de acceso
 - `/panel` → panel principal de la app
 - `/usuarios` → vista de administración de usuarios
-- `/pedidos/nuevo` → captura y registro de un pedido (desde el botón "Nuevo Pedido" del panel)
+- `/pedidos` → lista de todos los pedidos (desde "Pedidos" en el menú lateral)
+- `/pedidos/nuevo` → captura y registro de un pedido (desde el botón "Nuevo Pedido" del panel o de la lista de pedidos)
+- `/pedidos/:id` → detalle de un pedido (desde el folio en la lista)
 
 ## Lógica funcional por pantalla
 
@@ -80,7 +82,7 @@ La base actual del sistema tiene estas rutas principales:
   - A domicilio también pide dirección, que por defecto es la registrada de la sucursal elegida, y referencias.
   - Las observaciones son opcionales, de máximo 250 caracteres.
 - Al registrar se valida todo y el foco va al primer error. Si todo es válido, se confirma el resumen antes de enviar.
-- El registro está simulado hasta conectar `POST /api/pedidos`.
+- El registro usa `POST /api/pedidos`. La modalidad, la fecha de entrega y las referencias viajan dentro de `Observaciones`, porque la API no tiene campos para ellas. El folio es `#` y el `Id` del pedido creado.
 
 ```mermaid
 flowchart TD
@@ -92,12 +94,37 @@ flowchart TD
     F -- Corregir --> B
     F -- Confirmar --> G[POST /api/pedidos]
     G -- Error --> H[Aviso: No fue posible registrar el pedido] --> B
+    G -- "Sin conexión o 10 s sin respuesta" --> L[Aviso: No es posible conectar con el servidor] --> B
+    G -- 401 --> M[Inicio de sesión: Su sesión expiró]
     G -- Éxito --> I["Pedido #folio registrado correctamente"]
     I -- Registrar otro pedido --> B
     I -- Ir al inicio --> A
     B -- Cancelar o salir con datos --> J{"¿Descartar el pedido?"}
     J -- Seguir capturando --> B
     J -- Descartar --> K[Ruta elegida]
+```
+
+### 5. Pedidos (módulo de ventas)
+
+- **Lista** (`PedidosVista.vue`): todos los pedidos de `GET /api/pedidos`, del más reciente al más antiguo, en páginas de 10.
+  - Filtros por estado (Todos, Pendiente, Surtido, En reparto, Entregado), cada uno con su conteo según la búsqueda y las fechas.
+  - Búsqueda por folio o nombre del cliente, sin importar acentos ni mayúsculas, y rango Desde / Hasta sobre la fecha de registro.
+  - Entrega y modalidad salen de leer `Observaciones`; si el pedido no trae ese formato, se muestra "—".
+- **Detalle** (`DetallePedidoVista.vue`): barra de avance de los cuatro estados, cliente y entrega, y productos con su total. Si el folio no existe, se avisa con un enlace de regreso a la lista.
+- Solo consulta: no se cancelan ni se editan pedidos, porque la API todavía no tiene estado Cancelado ni historial de cambios.
+- Si la API responde 401, se cierra la sesión y se pasa a inicio de sesión con "Su sesión expiró. Inicie sesión nuevamente."
+
+```mermaid
+flowchart TD
+    A[Menú lateral: Pedidos] --> B[GET /api/pedidos + clientes activos]
+    B -- Error --> C[No fue posible cargar los pedidos · Reintentar] --> B
+    B -- 401 --> S[Inicio de sesión: Su sesión expiró]
+    B -- Éxito --> D[Lista con filtros y páginas]
+    D -- Cambiar de página --> E[Sucursales de los clientes que falten] --> D
+    D -- Clic en el folio --> F[GET /api/pedidos/:id]
+    F -- 404 --> G["No existe un pedido con el folio #id"]
+    F -- Éxito --> H[Detalle: avance, cliente y entrega, productos]
+    D -- Nuevo pedido --> N["/pedidos/nuevo"]
 ```
 
 ## Relación con los módulos
@@ -113,4 +140,4 @@ El flujo general del sistema está pensado para que cada módulo tenga una respo
 
 ## Observación de desarrollo
 
-El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido usa el inventario, los clientes activos y sus sucursales reales, pero el registro del pedido sigue simulado. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.
+El inicio de sesión y la consulta de inventario ya están conectados con la API. En ventas, Nuevo pedido ya usa el inventario, los clientes activos, sus sucursales y el registro de pedidos reales, y la pestaña Pedidos consulta la lista y el detalle de los pedidos. Las pantallas de administración y reparto todavía requieren integrar sus operaciones con el backend.

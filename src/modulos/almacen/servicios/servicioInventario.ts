@@ -3,10 +3,40 @@ import { obtenerToken } from '@/modulos/autenticacion/servicios/servicioAutentic
 const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export interface ArticuloInventario {
+  /** Código del producto como número. null si la API no lo manda como entero positivo. */
+  codigoProducto: number | null
   talla: string
   precio: number
   master: number
   cantidadKg: number
+}
+
+/** Artículo tal como llega de GET /api/inventario/actual. */
+interface ArticuloInventarioAPI {
+  /** Texto con dígitos, p. ej. "1000006". */
+  codigoProducto?: string | number | null
+  talla: string
+  precio: number
+  master: number
+  cantidadKg: number
+}
+
+/** "1000006" → 1000006. null si no viene, viene vacío o no es un entero positivo. */
+function aCodigoProducto(valor: unknown): number | null {
+  const texto = typeof valor === 'string' ? valor.trim() : typeof valor === 'number' ? String(valor) : ''
+  if (!/^\d+$/.test(texto)) return null
+  const codigo = Number(texto)
+  return Number.isSafeInteger(codigo) && codigo > 0 ? codigo : null
+}
+
+function aArticulo(articulo: ArticuloInventarioAPI): ArticuloInventario {
+  return {
+    codigoProducto: aCodigoProducto(articulo.codigoProducto),
+    talla: articulo.talla,
+    precio: articulo.precio,
+    master: articulo.master,
+    cantidadKg: articulo.cantidadKg,
+  }
 }
 
 export async function obtenerInventarioActual(): Promise<ArticuloInventario[]> {
@@ -25,7 +55,7 @@ export async function obtenerInventarioActual(): Promise<ArticuloInventario[]> {
   }
 
   const datosRespuesta = await respuestaHttp.json().catch(() => null) as
-    | ArticuloInventario[]
+    | ArticuloInventarioAPI[]
     | { error?: string }
     | null
 
@@ -38,5 +68,5 @@ export async function obtenerInventarioActual(): Promise<ArticuloInventario[]> {
     throw new Error('La respuesta de la API no contiene una lista de inventario válida.')
   }
 
-  return datosRespuesta
+  return datosRespuesta.map(aArticulo)
 }

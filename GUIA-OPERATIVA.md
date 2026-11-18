@@ -110,7 +110,19 @@ Se encarga del módulo de administración y usuarios.
 
 ### Ventas
 
-Contiene la pantalla **Nuevo pedido**: el asesor busca un cliente activo, elige la sucursal de entrega, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
+Contiene la pestaña **Pedidos** (lista y detalle, solo consulta) y la pantalla **Nuevo pedido**: el asesor busca un cliente activo, elige la sucursal de entrega, agrega productos del inventario, captura los datos de entrega, confirma el resumen y registra el pedido. El pedido queda en estado Pendiente con un folio.
+
+#### Pedidos (lista y detalle)
+
+- Rutas: `/pedidos` (nombre `pedidos`) y `/pedidos/:id` (nombre `detalle-pedido`; solo ids numéricos, para no chocar con `/pedidos/nuevo`). Ambas requieren sesión. Se abren desde "Pedidos" en el menú lateral.
+- Vistas: `PedidosVista.vue` y `DetallePedidoVista.vue`; componentes `FiltrosPedidosVue.vue` (píldoras de estado, búsqueda y fechas) y `AvancePedidoVue.vue` (barra de avance).
+- Controladores: `usarListaPedidos.ts` (carga, filtros, conteos y páginas de 10, todo en la web), `usarDetallePedido.ts`, `usarDirectorioPedidos.ts` (nombres de cliente y sucursal) y `sesionVencida.ts` (401 → inicio de sesión).
+- Estados: `estadosPedido.ts` traduce el `Estatus` de la API: 1 Pendiente, 2 Surtido, 3 En reparto, 4 Entregado. Un número desconocido se ve como "Estado {n}". Si cambian los nombres, se ajustan solo ahí.
+- Observaciones: `observacionesPedido.ts` arma el texto que guarda Nuevo pedido y lo lee de vuelta (modalidad, fecha de entrega, `Dir:`, `Ref:` y notas). Un pedido sin ese formato muestra el texto completo como observaciones.
+- Datos: `GET /api/pedidos` y `GET /api/pedidos/:id` (`servicioPedidos.ts`, con el mismo manejo de 401 y límite de 10 s que el registro). El pedido solo trae `IdCliente` e `IdSucursal`: el nombre del cliente sale de `GET /api/clientes/activos` ("Cliente #Id" si está inactivo) y las sucursales se piden por cliente, solo para los de la página a la vista, una vez cada uno ("Sucursal #Id" si no se encuentra).
+- No se usa `PUT` ni `DELETE /api/pedidos`. No hay botón de cancelar ni historial: la API todavía no tiene estado Cancelado ni guarda los cambios de estado.
+
+#### Nuevo pedido
 
 - Ruta: `/pedidos/nuevo` (nombre `nuevo-pedido`, requiere sesión). Se abre con el botón "Nuevo Pedido" del panel.
 - Vista: `src/modulos/ventas/vistas/NuevoPedidoVista.vue`
@@ -121,9 +133,11 @@ Contiene la pantalla **Nuevo pedido**: el asesor busca un cliente activo, elige 
   - Productos: reales, de `GET /api/inventario/actual` (`src/modulos/almacen/servicios/servicioInventario.ts`).
   - Clientes: reales, de `GET /api/clientes/activos` (`servicioClientesVentas.ts`). La lista se pide una vez al hacer la primera búsqueda, se guarda en memoria mientras la pantalla está abierta y se filtra en el navegador por nombre (máximo 50 resultados, ordenados por nombre). Hoy la API solo trae `Id` y `Nombre`; si agrega `Telefono`, también se busca y se muestra sin más cambios. No usar `GET /api/clientes`: regresa contraseñas.
   - Sucursales: reales, de `GET /api/sucursales-clientes?idCliente={id}` (`servicioClientesVentas.ts`). Solo se muestran las activas (`Estatus` 1).
-  - Registro: **simulado** en `servicioPedidos.ts`. Endpoint propuesto `POST /api/pedidos`, todavía no existe. Devuelve folios consecutivos desde `#12348`.
+  - Registro: real, con `POST /api/pedidos` (`servicioPedidos.ts`). Se envía con `Estatus` 1 (creado) y `Fecha` de hoy como entero `aaaammdd`; el folio es `#` y el `Id` que regresa la API. Como la API no tiene campos para modalidad, fecha de entrega ni referencias, van al inicio de `Observaciones`, seguidas de lo que capturó la asesora (p. ej. `A domicilio · Entrega 28/10/2026 · Ref: portón negro · Llamar antes de llegar`). Las líneas llevan `Talla`, `Cantidad`, `Precio` y `Subtotal`; todavía sin `CodigoProducto`, porque el inventario no lo trae.
 
-Para probar los avisos de error de clientes o sucursales, bloquea la petición en la pestaña Red de las herramientas del navegador (clic derecho → "Bloquear URL de solicitud") sobre `clientes/activos` o `sucursales-clientes`. Para el registro, cambia a `true` la constante `FORZAR_ERROR_REGISTRO` (en `servicioPedidos.ts`) y regrésala a `false` antes de subir cambios. Si la API no está corriendo, la sección Productos muestra "No es posible confirmar la disponibilidad en este momento." y no deja agregar productos.
+Avisos del registro: si la API responde 401, se cierra la sesión y se pasa a inicio de sesión con "Su sesión expiró. Inicie sesión nuevamente."; si no hay conexión o pasan 10 segundos sin respuesta, se cancela y aparece "No es posible conectar con el servidor. Intente más tarde."; cualquier otro error muestra "No fue posible registrar el pedido. Intente nuevamente." El mensaje exacto de la API se ve en la respuesta de la petición, en la pestaña Red.
+
+Para probar los avisos de error, bloquea la petición en la pestaña Red de las herramientas del navegador (clic derecho → "Bloquear URL de solicitud") sobre `clientes/activos`, `sucursales-clientes` o `api/pedidos`. Si la API no está corriendo, la sección Productos muestra "No es posible confirmar la disponibilidad en este momento." y no deja agregar productos.
 
 Si hay datos capturados, salir de la pantalla por el menú lateral, el botón atrás del navegador o "Cancelar" pide confirmar que se descartan. Recargar la página o cerrar la pestaña no pide confirmación.
 
@@ -139,7 +153,9 @@ El enrutador usa historial HTML5 configurado con Vue Router:
 - `/inicio-sesion`
 - `/panel`
 - `/usuarios`
+- `/pedidos`
 - `/pedidos/nuevo`
+- `/pedidos/:id` (solo números)
 
 ## 10. Convenciones de desarrollo
 

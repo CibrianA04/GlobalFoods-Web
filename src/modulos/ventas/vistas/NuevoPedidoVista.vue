@@ -4,7 +4,7 @@
 // los modales y la navegación.
 
 import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { RouterLink, onBeforeRouteLeave, useRouter } from 'vue-router'
 
 import AvisoVue from '@/componentes/AvisoVue.vue'
 import IconoVue from '@/componentes/IconoVue.vue'
@@ -17,8 +17,10 @@ import SeccionClienteVue from '@/modulos/ventas/componentes/SeccionClienteVue.vu
 import SeccionEntregaVue from '@/modulos/ventas/componentes/SeccionEntregaVue.vue'
 import SeccionProductosVue from '@/modulos/ventas/componentes/SeccionProductosVue.vue'
 import SelectorSucursalVue from '@/modulos/ventas/componentes/SelectorSucursalVue.vue'
+import { salirPorSesionVencida } from '@/modulos/ventas/controladores/sesionVencida'
 import { MENSAJES, usarNuevoPedido } from '@/modulos/ventas/controladores/usarNuevoPedido'
 import { descartarClientesEnMemoria } from '@/modulos/ventas/servicios/servicioClientesVentas'
+import { ErrorPedidos } from '@/modulos/ventas/servicios/servicioPedidos'
 import { obtenerNombreUsuario, obtenerMenuNavegacion } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
 
 const nombreUsuario = obtenerNombreUsuario() || 'Usuario'
@@ -73,10 +75,29 @@ async function alConfirmar() {
     estadoConfirmacion.value = 'exito'
     // El pedido ya quedó registrado: se limpia de inmediato para que no se pueda reenviar.
     limpiarFormulario()
-  } catch {
+  } catch (error) {
     mostrarConfirmacion.value = false
-    avisar(MENSAJES.errorRegistro)
+    const errorPedidos = error instanceof ErrorPedidos ? error : null
+    if (errorPedidos?.motivo === 'sesion') {
+      alExpirarSesion()
+      return
+    }
+    avisar(mensajeErrorRegistro(errorPedidos))
   }
+}
+
+function mensajeErrorRegistro(error: ErrorPedidos | null): string {
+  if (error?.motivo === 'conexion') return MENSAJES.sinConexion
+  // 400: la API rechazó los datos y su mensaje dice por qué.
+  if (error?.motivo === 'datos_invalidos' && error.mensajeApi) return error.mensajeApi
+  return MENSAJES.errorRegistro
+}
+
+// La API rechazó el token: se cierra la sesión y se pide entrar de nuevo, sin preguntar por
+// el descarte (con la sesión vencida, lo capturado ya no se puede registrar).
+function alExpirarSesion() {
+  salidaConfirmada = true
+  salirPorSesionVencida(enrutador)
 }
 
 function limpiarFormulario() {
@@ -132,7 +153,7 @@ onBeforeRouteLeave((destino) => {
     <div class="nuevo-pedido">
       <nav class="migas" aria-label="Ruta de navegación">
         <ol class="migas__lista">
-          <li>Pedidos</li>
+          <li><RouterLink :to="{ name: 'pedidos' }" class="migas__enlace">Pedidos</RouterLink></li>
           <li aria-current="page">
             <span class="migas__separador" aria-hidden="true">›</span>
             Nuevo pedido
@@ -264,6 +285,16 @@ onBeforeRouteLeave((destino) => {
 .migas__separador {
   margin-right: 8px;
   color: var(--gf-texto-tenue);
+}
+
+.migas__enlace {
+  color: var(--gf-secundario);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.migas__enlace:hover {
+  text-decoration: underline;
 }
 
 .nuevo-pedido__encabezado {

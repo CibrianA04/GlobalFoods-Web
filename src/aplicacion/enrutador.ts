@@ -7,6 +7,8 @@ import { haySesion } from '@/modulos/autenticacion/servicios/servicioAutenticaci
 import ClientesVista from '@/modulos/administracion/vistas/ClientesVista.vue'
 import DetalleClienteVista from '@/modulos/administracion/vistas/DetalleClienteVista.vue'
 import NuevoPedidoVista from '@/modulos/ventas/vistas/NuevoPedidoVista.vue'
+import PedidosVista from '@/modulos/ventas/vistas/PedidosVista.vue'
+import DetallePedidoVista from '@/modulos/ventas/vistas/DetallePedidoVista.vue'
 
 const enrutador = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,9 +35,22 @@ const enrutador = createRouter({
       meta: { requiereAutenticacion: true },
     },
     {
+      path: '/pedidos',
+      name: 'pedidos',
+      component: PedidosVista,
+      meta: { requiereAutenticacion: true },
+    },
+    {
       path: '/pedidos/nuevo',
       name: 'nuevo-pedido',
       component: NuevoPedidoVista,
+      meta: { requiereAutenticacion: true },
+    },
+    {
+      // Solo números, para que no choque con /pedidos/nuevo.
+      path: '/pedidos/:id(\\d+)',
+      name: 'detalle-pedido',
+      component: DetallePedidoVista,
       meta: { requiereAutenticacion: true },
     },
     {

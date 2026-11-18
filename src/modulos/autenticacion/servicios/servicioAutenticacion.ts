@@ -79,7 +79,7 @@ export function obtenerMenuNavegacion(): ItemNavegacion[] {
 
   const menuCompleto: ItemNavegacion[] = [
     { etiqueta: 'Inicio', icono: 'inicio', ruta: '/panel' },
-    { etiqueta: 'Pedidos', icono: 'pedidos' },
+    { etiqueta: 'Pedidos', icono: 'pedidos', ruta: '/pedidos' },
     { etiqueta: 'Clientes', icono: 'clientes', ruta: '/clientes' },
     { etiqueta: 'Reportes', icono: 'reportes' },
     { etiqueta: 'Usuarios', icono: 'usuario', ruta: '/usuarios' }

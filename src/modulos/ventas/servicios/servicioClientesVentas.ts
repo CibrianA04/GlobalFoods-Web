@@ -1,4 +1,5 @@
 import { obtenerToken } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
+import { normalizarTexto } from '@/modulos/ventas/controladores/formatosPedido'
 import type { Cliente, SucursalCliente } from '@/modulos/ventas/interfaces/cliente'
 
 const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -28,8 +29,13 @@ interface SucursalClienteAPI {
  * Pide una lista a la API con el token de la sesión. Lanza error si no hay sesión, si no hay
  * conexión, si la API responde con error o si la respuesta no es una lista.
  * `descripcion` completa los mensajes: "los clientes", "las sucursales".
+ * `encabezados` se envían junto con el token.
  */
-async function consultarLista<T>(ruta: string, descripcion: string): Promise<T[]> {
+async function consultarLista<T>(
+  ruta: string,
+  descripcion: string,
+  encabezados: Record<string, string> = {},
+): Promise<T[]> {
   const token = obtenerToken()
   if (!token) {
     throw new Error('La sesión no está activa. Inicia sesión nuevamente.')
@@ -38,7 +44,7 @@ async function consultarLista<T>(ruta: string, descripcion: string): Promise<T[]
   let respuestaHttp: Response
   try {
     respuestaHttp = await fetch(`${URL_API.replace(/\/$/, '')}${ruta}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { ...encabezados, Authorization: `Bearer ${token}` },
     })
   } catch {
     throw new Error(`No se pudo conectar con el servidor para consultar ${descripcion}.`)
@@ -78,20 +84,16 @@ function aSucursal(sucursal: SucursalClienteAPI): SucursalCliente {
   }
 }
 
-/** Minúsculas y sin acentos, para comparar sin importar cómo se escribió. */
-function normalizar(texto: string): string {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-}
-
 /** Solo los dígitos, para comparar teléfonos sin importar espacios, guiones o paréntesis. */
 const soloDigitos = (texto: string) => texto.replace(/\D/g, '')
 
-// Clientes activos en memoria mientras Nuevo pedido está abierta: la primera búsqueda los pide
-// a la API y las siguientes filtran aquí. Se guarda la promesa para que dos búsquedas seguidas
-// compartan la misma consulta. La vista la descarta al cerrarse.
+// Clientes activos en memoria mientras está abierta la pantalla que los usa (Nuevo pedido,
+// Pedidos o el detalle de un pedido): la primera consulta los pide a la API y las siguientes
+// los toman de aquí. Se guarda la promesa para que dos consultas seguidas compartan la misma
+// petición. Cada vista la descarta al cerrarse.
 let clientesEnMemoria: Promise<Cliente[]> | null = null
 
-function obtenerClientesActivos(): Promise<Cliente[]> {
+function clientesActivosEnMemoria(): Promise<Cliente[]> {
   if (!clientesEnMemoria) {
     const consulta = consultarLista<ClienteActivoAPI>('/api/clientes/activos', 'los clientes').then((lista) =>
       lista.map(aCliente),
@@ -105,9 +107,14 @@ function obtenerClientesActivos(): Promise<Cliente[]> {
   return clientesEnMemoria
 }
 
-/** Descarta los clientes en memoria; la siguiente búsqueda los vuelve a pedir a la API. */
+/** Descarta los clientes en memoria; la siguiente consulta los vuelve a pedir a la API. */
 export function descartarClientesEnMemoria() {
   clientesEnMemoria = null
+}
+
+/** Todos los clientes activos (de la memoria, si ya se pidieron). Ver buscarClientes(). */
+export async function obtenerClientesActivos(): Promise<Cliente[]> {
+  return (await clientesActivosEnMemoria()).map((cliente) => ({ ...cliente }))
 }
 
 /**
@@ -122,16 +129,16 @@ export function descartarClientesEnMemoria() {
  * No usar GET /api/clientes: regresa las contraseñas de los clientes.
  */
 export async function buscarClientes(criterio: string): Promise<Cliente[]> {
-  const clientes = await obtenerClientesActivos()
+  const clientes = await clientesActivosEnMemoria()
 
-  const texto = normalizar(criterio)
+  const texto = normalizarTexto(criterio)
   // Solo se compara con el teléfono si lo capturado parece un número.
   const digitos = /^[\d\s()+-]+$/.test(criterio.trim()) ? soloDigitos(criterio) : ''
 
   return clientes
     .filter(
       (cliente) =>
-        normalizar(cliente.nombre).includes(texto) ||
+        normalizarTexto(cliente.nombre).includes(texto) ||
         (digitos !== '' && cliente.telefono !== null && soloDigitos(cliente.telefono).includes(digitos)),
     )
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -140,26 +147,42 @@ export async function buscarClientes(criterio: string): Promise<Cliente[]> {
 }
 
 /**
- * Sucursales activas (Estatus 1) de un cliente, ordenadas por nombre.
+ * Sucursales de un cliente, tal como llegan de la API.
  *
  *   GET /api/sucursales-clientes?idCliente={id}
  *   Authorization: Bearer <token>
+ *   X-Id-Cliente: {id}   (obligatorio; sin él la API responde 400)
  *   200 → [{ Id, IdCliente, NombreSucursal, Direccion, Telefono, Estatus }]
  *
  * Si la consulta falla lanza error (no devuelve una lista vacía), para no confundir un fallo
  * con un cliente sin sucursales.
  */
-export async function obtenerSucursalesActivas(idCliente: number): Promise<SucursalCliente[]> {
+async function consultarSucursales(idCliente: number): Promise<SucursalClienteAPI[]> {
   const sucursales = await consultarLista<SucursalClienteAPI>(
     `/api/sucursales-clientes?idCliente=${encodeURIComponent(idCliente)}`,
     'las sucursales',
+    { 'X-Id-Cliente': String(idCliente) },
   )
+  // Se revisa también el cliente por si la API llegara a ignorar el filtro.
+  return sucursales.filter((sucursal) => sucursal.IdCliente === idCliente)
+}
 
-  return (
-    sucursales
-      // Se revisa también el cliente por si la API llegara a ignorar el filtro.
-      .filter((sucursal) => sucursal.Estatus === ESTATUS_ACTIVO && sucursal.IdCliente === idCliente)
-      .map(aSucursal)
-      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  )
+const porNombre = (a: SucursalCliente, b: SucursalCliente) => a.nombre.localeCompare(b.nombre, 'es')
+
+/** Sucursales activas (Estatus 1) de un cliente, ordenadas por nombre: entre ellas se elige al capturar. */
+export async function obtenerSucursalesActivas(idCliente: number): Promise<SucursalCliente[]> {
+  const sucursales = await consultarSucursales(idCliente)
+  return sucursales
+    .filter((sucursal) => sucursal.Estatus === ESTATUS_ACTIVO)
+    .map(aSucursal)
+    .sort(porNombre)
+}
+
+/**
+ * Todas las sucursales de un cliente, activas e inactivas, ordenadas por nombre. Para mostrar
+ * pedidos ya registrados, cuya sucursal pudo desactivarse después.
+ */
+export async function obtenerSucursalesCliente(idCliente: number): Promise<SucursalCliente[]> {
+  const sucursales = await consultarSucursales(idCliente)
+  return sucursales.map(aSucursal).sort(porNombre)
 }

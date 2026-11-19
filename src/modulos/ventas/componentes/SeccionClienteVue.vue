@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Paso 1 del pedido: buscar y elegir un cliente registrado.
-// El buscador sigue el patrón combobox con lista: flechas para recorrer, Enter para elegir y
-// Escape para cerrar la lista.
+// El buscador sigue el patrón combobox con lista: al hacer clic se despliegan todos los clientes
+// y al escribir la lista se va reduciendo. Flechas para recorrer, Enter para elegir (o elige solo
+// si queda uno) y Escape para cerrar la lista.
 // Con un cliente elegido, el slot pinta debajo de su tarjeta lo que depende de él (la sucursal).
 
 import { nextTick, reactive, watch } from 'vue'
@@ -68,10 +69,10 @@ function alPresionarTecla(evento: KeyboardEvent) {
       buscador.moverActivo(-1)
       break
     case 'Enter': {
-      const activo = buscador.listaAbierta ? buscador.resultados[buscador.indiceActivo] : undefined
-      if (activo) {
+      const elegido = buscador.opcionParaEnter
+      if (elegido) {
         evento.preventDefault()
-        seleccionar(activo)
+        seleccionar(elegido)
       }
       break
     }
@@ -94,7 +95,7 @@ function alPresionarTecla(evento: KeyboardEvent) {
         :id="IDS_CAMPOS.cliente"
         v-model="buscador.criterio"
         etiqueta="Buscar cliente"
-        marcador="Nombre del cliente (mínimo 3 caracteres)"
+        marcador="Escribe el nombre o elige de la lista"
         icono="lupa"
         obligatorio
         compacto
@@ -107,6 +108,8 @@ function alPresionarTecla(evento: KeyboardEvent) {
         :aria-controls="ID_LISTA"
         :aria-activedescendant="buscador.indiceActivo >= 0 ? idOpcion(buscador.indiceActivo) : undefined"
         @keydown="alPresionarTecla"
+        @input="buscador.alEscribir()"
+        @click="buscador.abrirLista()"
         @focus="buscador.abrirLista()"
         @blur="buscador.cerrarLista()"
       />

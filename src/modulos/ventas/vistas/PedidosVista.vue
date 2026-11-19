@@ -79,9 +79,11 @@ async function alCambiarPagina(paso: 1 | -1) {
       <FiltrosPedidosVue
         v-model:estatus="lista.estatus"
         v-model:criterio="lista.criterio"
+        v-model:id-cliente="lista.idCliente"
         v-model:desde="lista.desde"
         v-model:hasta="lista.hasta"
         :conteos="lista.conteos"
+        :clientes="lista.clientesConPedidos"
         :error-fechas="lista.errorFechas"
         :hay-filtros="lista.hayFiltros"
         @limpiar="alLimpiar"

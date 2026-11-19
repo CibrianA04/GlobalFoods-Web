@@ -1,10 +1,8 @@
 import { obtenerToken } from '@/modulos/autenticacion/servicios/servicioAutenticacion'
-import { normalizarTexto } from '@/modulos/ventas/controladores/formatosPedido'
 import type { Cliente, SucursalCliente } from '@/modulos/ventas/interfaces/cliente'
 
 const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-const MAXIMO_RESULTADOS = 50
 const ESTATUS_ACTIVO = 1
 
 /** Cliente tal como llega de GET /api/clientes/activos. */
@@ -84,9 +82,6 @@ function aSucursal(sucursal: SucursalClienteAPI): SucursalCliente {
   }
 }
 
-/** Solo los dígitos, para comparar teléfonos sin importar espacios, guiones o paréntesis. */
-const soloDigitos = (texto: string) => texto.replace(/\D/g, '')
-
 // Clientes activos en memoria mientras está abierta la pantalla que los usa (Nuevo pedido,
 // Pedidos o el detalle de un pedido): la primera consulta los pide a la API y las siguientes
 // los toman de aquí. Se guarda la promesa para que dos consultas seguidas compartan la misma
@@ -112,38 +107,19 @@ export function descartarClientesEnMemoria() {
   clientesEnMemoria = null
 }
 
-/** Todos los clientes activos (de la memoria, si ya se pidieron). Ver buscarClientes(). */
-export async function obtenerClientesActivos(): Promise<Cliente[]> {
-  return (await clientesActivosEnMemoria()).map((cliente) => ({ ...cliente }))
-}
-
 /**
- * Busca clientes activos por nombre o teléfono, sin importar acentos ni mayúsculas.
- * Devuelve como máximo 50, ordenados por nombre.
+ * Todos los clientes activos (de la memoria, si ya se pidieron). El buscador de Nuevo pedido
+ * los muestra completos y los filtra en el navegador (ver usarBuscadorClientes).
  *
  *   GET /api/clientes/activos
  *   Authorization: Bearer <token>
- *   200 → [{ Id, Nombre }] (todos los activos; el filtro, el orden y el límite se aplican aquí)
+ *   200 → [{ Id, Nombre }] (todos los activos)
  *   4xx/5xx → { error: string }
  *
  * No usar GET /api/clientes: regresa las contraseñas de los clientes.
  */
-export async function buscarClientes(criterio: string): Promise<Cliente[]> {
-  const clientes = await clientesActivosEnMemoria()
-
-  const texto = normalizarTexto(criterio)
-  // Solo se compara con el teléfono si lo capturado parece un número.
-  const digitos = /^[\d\s()+-]+$/.test(criterio.trim()) ? soloDigitos(criterio) : ''
-
-  return clientes
-    .filter(
-      (cliente) =>
-        normalizarTexto(cliente.nombre).includes(texto) ||
-        (digitos !== '' && cliente.telefono !== null && soloDigitos(cliente.telefono).includes(digitos)),
-    )
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-    .slice(0, MAXIMO_RESULTADOS)
-    .map((cliente) => ({ ...cliente }))
+export async function obtenerClientesActivos(): Promise<Cliente[]> {
+  return (await clientesActivosEnMemoria()).map((cliente) => ({ ...cliente }))
 }
 
 /**

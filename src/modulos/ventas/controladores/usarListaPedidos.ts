@@ -32,6 +32,13 @@ export interface ConteosPedidos {
   porEstatus: Record<number, number>
 }
 
+/** Cliente que aparece en los pedidos, con cuántos tiene; son las opciones del buscador. */
+export interface ClienteConPedidos {
+  id: number
+  nombre: string
+  pedidos: number
+}
+
 /** Renglón de la tabla, ya resuelto para pintarlo. */
 export interface FilaPedido {
   id: number
@@ -63,6 +70,8 @@ export function usarListaPedidos(opciones: { alVencerSesion: () => void }) {
   /** null = Todos. */
   const estatus = ref<number | null>(null)
   const criterio = ref('')
+  /** Cliente elegido en la lista del buscador; null si se busca por lo escrito. */
+  const idCliente = ref<number | null>(null)
   /** aaaa-mm-dd */
   const desde = ref('')
   const hasta = ref('')
@@ -86,6 +95,17 @@ export function usarListaPedidos(opciones: { alVencerSesion: () => void }) {
     desde.value && hasta.value && desde.value > hasta.value ? MENSAJES_LISTA.rangoFechas : '',
   )
 
+  /** Clientes que tienen pedidos, con cuántos, para la lista del buscador. */
+  const clientesConPedidos = computed<ClienteConPedidos[]>(() => {
+    const porCliente = new Map<number, ClienteConPedidos>()
+    for (const { pedido, cliente } of pedidosResueltos.value) {
+      const registro = porCliente.get(pedido.idCliente)
+      if (registro) registro.pedidos += 1
+      else porCliente.set(pedido.idCliente, { id: pedido.idCliente, nombre: cliente, pedidos: 1 })
+    }
+    return [...porCliente.values()]
+  })
+
   /** Con búsqueda y fechas aplicadas; sobre ellos se cuentan las píldoras de estado. */
   const porBusquedaYFechas = computed(() => {
     const texto = normalizarTexto(criterio.value)
@@ -95,7 +115,10 @@ export function usarListaPedidos(opciones: { alVencerSesion: () => void }) {
     const aplicaFechas = !errorFechas.value
 
     return pedidosResueltos.value.filter(({ pedido, clienteNormalizado }) => {
-      if (texto && !clienteNormalizado.includes(texto) && !(buscaFolio && String(pedido.id).includes(folio))) {
+      // Con un cliente elegido de la lista, solo sus pedidos (lo escrito es su nombre).
+      if (idCliente.value !== null) {
+        if (pedido.idCliente !== idCliente.value) return false
+      } else if (texto && !clienteNormalizado.includes(texto) && !(buscaFolio && String(pedido.id).includes(folio))) {
         return false
       }
       if (aplicaFechas && desde.value && pedido.fechaRegistro < desde.value) return false
@@ -150,7 +173,7 @@ export function usarListaPedidos(opciones: { alVencerSesion: () => void }) {
   watch(idsClientesPagina, (ids) => directorio.cargarSucursales(ids))
 
   // Cualquier cambio de filtros regresa a la primera página.
-  watch([estatus, criterio, desde, hasta], () => {
+  watch([estatus, criterio, idCliente, desde, hasta], () => {
     pagina.value = 1
   })
 
@@ -179,12 +202,18 @@ export function usarListaPedidos(opciones: { alVencerSesion: () => void }) {
   }
 
   const hayFiltros = computed(
-    () => estatus.value !== null || criterio.value.trim() !== '' || desde.value !== '' || hasta.value !== '',
+    () =>
+      estatus.value !== null ||
+      criterio.value.trim() !== '' ||
+      idCliente.value !== null ||
+      desde.value !== '' ||
+      hasta.value !== '',
   )
 
   function limpiarFiltros() {
     estatus.value = null
     criterio.value = ''
+    idCliente.value = null
     desde.value = ''
     hasta.value = ''
   }
@@ -199,6 +228,8 @@ export function usarListaPedidos(opciones: { alVencerSesion: () => void }) {
     hayPedidos: computed(() => pedidos.value.length > 0),
     estatus,
     criterio,
+    idCliente,
+    clientesConPedidos,
     desde,
     hasta,
     errorFechas,

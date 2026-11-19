@@ -68,7 +68,8 @@ La base actual del sistema tiene estas rutas principales:
 
 - `NuevoPedidoVista.vue` se divide en tres pasos y un resumen lateral que se queda fijo al desplazar. En pantallas de menos de 900 px, el resumen va debajo del formulario.
 - **Cliente**:
-  - Busca clientes activos por nombre mientras se escribe, a partir de 3 caracteres y con 300 ms de espera. La lista sale de `GET /api/clientes/activos`, se pide una vez y se filtra en el navegador. Si la API agrega el teléfono, también se busca por él.
+  - Al hacer clic en el buscador (o con la flecha abajo) se despliega la lista de todos los clientes activos, por nombre. Al escribir, la lista se reduce al instante desde la primera letra, sin importar acentos ni mayúsculas: primero los que empiezan con lo escrito y después los que lo contienen. La lista sale de `GET /api/clientes/activos`, se pide una vez y se filtra en el navegador. Si la API agrega el teléfono, también se busca por él.
+  - Enter elige la opción resaltada, o el cliente si solo queda uno.
   - La lista se recorre con flechas, Enter y Escape.
   - Al elegir el cliente se cargan sus sucursales activas. Si tiene una, se selecciona sola; si tiene varias, se elige en la lista; si no tiene, se avisa y no se puede registrar. La sucursal es obligatoria.
   - Los clientes nuevos no se dan de alta aquí.
@@ -109,6 +110,7 @@ flowchart TD
 - **Lista** (`PedidosVista.vue`): todos los pedidos de `GET /api/pedidos`, del más reciente al más antiguo, en páginas de 10.
   - Filtros por estado (Todos, Pendiente, Surtido, En reparto, Entregado), cada uno con su conteo según la búsqueda y las fechas.
   - Búsqueda por folio o nombre del cliente, sin importar acentos ni mayúsculas, y rango Desde / Hasta sobre la fecha de registro.
+  - El buscador funciona como el de Nuevo pedido: al hacer clic se despliegan los clientes que tienen pedidos, con cuántos tiene cada uno, y al escribir la lista se reduce. Elegir un cliente deja solo sus pedidos; volver a escribir regresa a buscar por folio o nombre.
   - Entrega y modalidad salen de leer `Observaciones`; si el pedido no trae ese formato, se muestra "—".
 - **Detalle** (`DetallePedidoVista.vue`): barra de avance de los cuatro estados, cliente y entrega, y productos con su total. Si el folio no existe, se avisa con un enlace de regreso a la lista.
 - Solo consulta: no se cancelan ni se editan pedidos, porque la API todavía no tiene estado Cancelado ni historial de cambios.

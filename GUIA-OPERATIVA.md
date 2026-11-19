@@ -115,7 +115,7 @@ Contiene la pestaña **Pedidos** (lista y detalle, solo consulta) y la pantalla 
 #### Pedidos (lista y detalle)
 
 - Rutas: `/pedidos` (nombre `pedidos`) y `/pedidos/:id` (nombre `detalle-pedido`; solo ids numéricos, para no chocar con `/pedidos/nuevo`). Ambas requieren sesión. Se abren desde "Pedidos" en el menú lateral.
-- Vistas: `PedidosVista.vue` y `DetallePedidoVista.vue`; componentes `FiltrosPedidosVue.vue` (píldoras de estado, búsqueda y fechas) y `AvancePedidoVue.vue` (barra de avance).
+- Vistas: `PedidosVista.vue` y `DetallePedidoVista.vue`; componentes `FiltrosPedidosVue.vue` (píldoras de estado, búsqueda con lista de clientes y fechas) y `AvancePedidoVue.vue` (barra de avance).
 - Controladores: `usarListaPedidos.ts` (carga, filtros, conteos y páginas de 10, todo en la web), `usarDetallePedido.ts`, `usarDirectorioPedidos.ts` (nombres de cliente y sucursal) y `sesionVencida.ts` (401 → inicio de sesión).
 - Estados: `estadosPedido.ts` traduce el `Estatus` de la API: 1 Pendiente, 2 Surtido, 3 En reparto, 4 Entregado. Un número desconocido se ve como "Estado {n}". Si cambian los nombres, se ajustan solo ahí.
 - Observaciones: `observacionesPedido.ts` arma el texto que guarda Nuevo pedido y lo lee de vuelta (modalidad, fecha de entrega, `Dir:`, `Ref:` y notas). Un pedido sin ese formato muestra el texto completo como observaciones.
@@ -131,7 +131,7 @@ Contiene la pestaña **Pedidos** (lista y detalle, solo consulta) y la pantalla 
 - Tipos: `src/modulos/ventas/interfaces/cliente.ts` y `pedido.ts`
 - Servicios:
   - Productos: reales, de `GET /api/inventario/actual` (`src/modulos/almacen/servicios/servicioInventario.ts`).
-  - Clientes: reales, de `GET /api/clientes/activos` (`servicioClientesVentas.ts`). La lista se pide una vez al hacer la primera búsqueda, se guarda en memoria mientras la pantalla está abierta y se filtra en el navegador por nombre (máximo 50 resultados, ordenados por nombre). Hoy la API solo trae `Id` y `Nombre`; si agrega `Telefono`, también se busca y se muestra sin más cambios. No usar `GET /api/clientes`: regresa contraseñas.
+  - Clientes: reales, de `GET /api/clientes/activos` (`servicioClientesVentas.ts`). La lista se pide una vez al abrir el buscador, se guarda en memoria mientras la pantalla está abierta y se muestra completa, por nombre. Al escribir se filtra en el navegador desde la primera letra (primero los que empiezan con lo escrito, después los que lo contienen). Hoy la API solo trae `Id` y `Nombre`; si agrega `Telefono`, también se busca y se muestra sin más cambios. No usar `GET /api/clientes`: regresa contraseñas.
   - Sucursales: reales, de `GET /api/sucursales-clientes?idCliente={id}` (`servicioClientesVentas.ts`). Solo se muestran las activas (`Estatus` 1).
   - Registro: real, con `POST /api/pedidos` (`servicioPedidos.ts`). Se envía con `Estatus` 1 (creado) y `Fecha` de hoy como entero `aaaammdd`; el folio es `#` y el `Id` que regresa la API. Como la API no tiene campos para modalidad, fecha de entrega ni referencias, van al inicio de `Observaciones`, seguidas de lo que capturó la asesora (p. ej. `A domicilio · Entrega 28/10/2026 · Ref: portón negro · Llamar antes de llegar`). Las líneas llevan `Talla`, `Cantidad`, `Precio` y `Subtotal`; todavía sin `CodigoProducto`, porque el inventario no lo trae.
 
